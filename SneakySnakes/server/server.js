@@ -60,7 +60,8 @@ function validUuid(value) {
 }
 function sendProfile(player) {
     if (!player.account) return;
-    send(player.ws, { type: 'profile', coins: player.account.coins,
+    send(player.ws, { type: 'profile', uuid: player.account.uuid, name: player.account.name,
+        coins: player.account.coins,
         unlockedSkins: player.account.unlockedSkins || '',
         currentSkinId: player.account.currentSkinId || 'bright_green' });
 }
