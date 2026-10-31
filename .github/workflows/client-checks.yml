@@ -9,6 +9,13 @@ on:
       - android-port
 
 jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check multiplayer server syntax
+        run: node --check server/server.js
+
   desktop:
     runs-on: ubuntu-latest
     steps:
