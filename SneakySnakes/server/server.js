@@ -401,13 +401,14 @@ setInterval(() => { ensureFoods(); broadcastFoods(); }, FOOD_RATE);
 setInterval(() => { ensureCoins(); broadcastCoins(); }, COIN_RATE);
 setInterval(() => { if (players.size === 0) return; const names = [...players.values()].map(p => `${p.name}(${p.body.length})`).join(', '); log(`Players: ${players.size} | ${names}`); }, 10000);
 
-// Admin command in the same server process: givecoins "Player Name" 500
-if (process.stdin.isTTY) {
+// Admin console command: addcoins/givecoins "Player Name" 500
+if (process.stdin && !process.stdin.destroyed) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
     rl.on('line', line => {
-        const m = line.trim().match(/^givecoins\\s+"([^"]+)"\\s+(\\d+)$/i) ||
-                  line.trim().match(/^givecoins\\s+(\\S+)\\s+(\\d+)$/i);
-        if (!m) { if (line.trim()) console.log('Use: givecoins "Player Name" 500'); return; }
+        const input = line.trim();
+        const m = input.match(/^(?:addcoins|givecoins)\s+"([^"]+)"\s+(\d+)$/i) ||
+                  input.match(/^(?:addcoins|givecoins)\s+(\S+)\s+(\d+)$/i);
+        if (!m) { if (input) console.log('Use: addcoins "Player Name" 500'); return; }
         const amount = Number(m[2]);
         if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000000) {
             console.log('Amount must be between 1 and 100000000.'); return;
