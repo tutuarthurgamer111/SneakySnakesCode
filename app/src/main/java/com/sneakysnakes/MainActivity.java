@@ -296,6 +296,16 @@ public class MainActivity extends Activity {
         NativeAudio.stopMusic();game=new NativeGameView(this,n,address,offline,mode);setContentView(game);game.loop();
     }
 
+    @Override protected void onPause() {
+        NativeAudio.pauseForFocusLoss();
+        super.onPause();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        NativeAudio.resumeAfterFocusGain();
+    }
+
     @Override public void onBackPressed(){
         if(game!=null){game.close();game=null;NativeAudio.menuMusic();showHome();return;}
         showHome();
