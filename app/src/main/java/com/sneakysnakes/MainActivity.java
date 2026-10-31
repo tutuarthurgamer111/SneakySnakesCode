@@ -1,79 +1,9 @@
 package com.sneakysnakes;
-
-import android.app.Activity;
-import android.os.Bundle;
-import android.view.View;
-import android.view.WindowManager;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-
-public class MainActivity extends Activity {
-    private WebView game;
-
-    @Override
-    protected void onCreate(Bundle state) {
-        super.onCreate(state);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        hideSystemUi();
-
-        game = new WebView(this);
-        game.setBackgroundColor(0xFF101522);
-        game.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        game.setWebViewClient(new WebViewClient());
-        game.setWebChromeClient(new WebChromeClient());
-
-        WebSettings settings = game.getSettings();
-        settings.setJavaScriptEnabled(true);
-        settings.setDomStorageEnabled(true);
-        settings.setDatabaseEnabled(true);
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setJavaScriptCanOpenWindowsAutomatically(false);
-        settings.setSupportZoom(false);
-        settings.setBuiltInZoomControls(false);
-        settings.setDisplayZoomControls(false);
-
-        setContentView(game);
-        game.loadUrl("file:///android_asset/pc.html");
-    }
-
-    private void hideSystemUi() {
-        getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            | View.SYSTEM_UI_FLAG_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-        );
-    }
-
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) hideSystemUi();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (game != null) {
-            game.evaluateJavascript("window.gameBack && window.gameBack()", null);
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (game != null) {
-            game.loadUrl("about:blank");
-            game.destroy();
-            game = null;
-        }
-        super.onDestroy();
-    }
+import android.app.Activity;import android.os.Bundle;import android.view.*;import android.widget.*;import android.graphics.Color;
+public class MainActivity extends Activity{
+ NativeGameView game; EditText name,url;
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().addFlags(128);menu();}
+ void menu(){LinearLayout l=new LinearLayout(this);l.setOrientation(1);l.setGravity(17);l.setPadding(28,20,28,20);l.setBackgroundColor(Color.rgb(8,14,24));TextView t=new TextView(this);t.setText("SNEAKYSNAKES");t.setTextColor(0xff69d5ff);t.setTextSize(32);t.setGravity(17);l.addView(t,new LinearLayout.LayoutParams(-1,90));name=new EditText(this);name.setSingleLine();name.setText("Player");name.setHint("Seu nome");name.setTextColor(-1);l.addView(name);url=new EditText(this);url.setSingleLine();url.setText("ws://163.176.148.122:3000");url.setHint("ws://servidor:3000");url.setTextColor(-1);l.addView(url);Button b=new Button(this);b.setText("CONECTAR E JOGAR");l.addView(b);TextView f=new TextView(this);f.setText("Cliente Android nativo • Canvas + WebSocket");f.setTextColor(-1);f.setGravity(17);l.addView(f);b.setOnClickListener(v->{String n=name.getText().toString().trim(),u=url.getText().toString().trim();if(n.isEmpty())n="Player";if(!u.startsWith("ws://")&&!u.startsWith("wss://")){Toast.makeText(this,"Endereço deve começar com ws:// ou wss://",1).show();return;}game=new NativeGameView(this,n,u);setContentView(game);game.loop();});setContentView(l);}
+ public void onBackPressed(){if(game!=null){game.close();game=null;menu();}else super.onBackPressed();}
+ protected void onDestroy(){if(game!=null)game.close();super.onDestroy();}
 }
