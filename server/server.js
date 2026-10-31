@@ -386,7 +386,7 @@ const id = nextId++;
             case 'respawn': {
                 if (player.alive) break;
                 const rx = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 9) - 4));
-                const ry = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() *  nine()) - 4));
+                const ry = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 9) - 4));
                 player.alive = true; player.body = [];
                 for (let i = 0; i < 4; i++) player.body.push([rx - i, ry]);
                 player.dir = [1, 0]; player.score = 0;
