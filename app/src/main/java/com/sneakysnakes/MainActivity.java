@@ -134,6 +134,7 @@ public class MainActivity extends Activity {
         addButton("CONTA",false,()->showAccount());
         addButton("LOJA DE SKINS",false,()->showShop());
         addButton("CONFIGURAÇÕES",false,()->showSettings());
+        if(getPreferences(0).getString("account_token","").isEmpty()){TextView hint=text("Para criar uma conta, clique em Conta",11,0xff8fa9bf);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(28));hp.topMargin=dp(4);root.addView(hint,hp);}
         root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(8)));
         root.addView(text("ANDROID NATIVO  •  SNEAKYSNAKES",11,0xff71879b),new LinearLayout.LayoutParams(-1,dp(22)));
     }
@@ -147,9 +148,9 @@ public class MainActivity extends Activity {
 
     void showOfflineModes() {
         base("JOGAR OFF-LINE","Escolha um modo de jogo");
-        addButton("CLASSIC MODE",true,()->startOffline("CLASSIC"));
-        addButton("PARTY MODE",false,()->startOffline("PARTY"));
-        addButton("INFINITE MODE",false,()->startOffline("INFINITE"));
+        addButton("Normal mode",true,()->startOffline("CLASSIC"));
+        addButton("Party mode",false,()->startOffline("PARTY"));
+        addButton("Infinite Mode",false,()->startOffline("INFINITE"));
         addButton("VOLTAR",false,()->showPlayMenu());
     }
 
@@ -260,7 +261,32 @@ public class MainActivity extends Activity {
             getPreferences(0).edit().remove("account_token").remove("account_nickname").remove("server_owned_skins").putInt("server_coins",0).apply();
             Toast.makeText(this,"Sessão removida deste aparelho.",Toast.LENGTH_SHORT).show();showAccount();
         });
+        addButton("DELETAR CONTA",false,()->confirmDeleteAccount());
         addButton("VOLTAR",false,()->showHome());
+    }
+
+    void confirmDeleteAccount() {
+        if(getPreferences(0).getString("account_token","").isEmpty()){Toast.makeText(this,"Entre na conta antes de excluí-la.",Toast.LENGTH_LONG).show();return;}
+        new AlertDialog.Builder(this).setTitle("Excluir conta?").setMessage("A conta será excluída permanentemente. Deseja continuar?")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Continuar",(d,w)->new AlertDialog.Builder(this)
+            .setTitle("Última confirmação").setMessage("Todas as moedas, skins e dados serão perdidos. Esta ação não pode ser desfeita.")
+            .setNegativeButton("Cancelar",null).setPositiveButton("Excluir",(d2,w2)->askDeletePassword()).show()).show();
+    }
+    void askDeletePassword(){
+        EditText password=edit("Senha da conta","",false);password.setInputType(129);
+        new AlertDialog.Builder(this).setTitle("Confirme sua senha").setMessage("Digite a senha da conta para concluir a exclusão.")
+            .setView(password).setNegativeButton("Cancelar",null).setPositiveButton("Confirmar",(d,w)->{String value=password.getText().toString();if(value.isEmpty()){Toast.makeText(this,"Digite sua senha.",Toast.LENGTH_SHORT).show();return;}deleteAccountRemote(value);}).show();
+    }
+    void deleteAccountRemote(String password){
+        String url=getPreferences(0).getString("last_server_url",""),token=getPreferences(0).getString("account_token","");
+        if(!url.startsWith("wss://")||token.isEmpty()){Toast.makeText(this,"Conecte-se a um servidor seguro e entre na conta.",Toast.LENGTH_LONG).show();return;}
+        if(shopSocket!=null)shopSocket.close();final boolean[] sent={false};
+        shopSocket=new NativeSocket(url,raw->{try{JSONObject response=new JSONObject(raw);String type=response.optString("type");
+            if(type.equals("auth_resumed")&&!sent[0]){sent[0]=true;JSONObject request=new JSONObject();request.put("type","auth_delete");request.put("password",password);shopSocket.send(request.toString());}
+            else if(type.equals("account_deleted"))runOnUiThread(()->{getPreferences(0).edit().remove("account_token").remove("account_nickname").remove("server_owned_skins").remove("server_equipped_skin").putInt("server_coins",0).apply();Toast.makeText(this,"Conta excluída permanentemente.",Toast.LENGTH_LONG).show();if(shopSocket!=null){shopSocket.close();shopSocket=null;}showAccount();});
+            else if(type.equals("auth_error")||type.equals("account_error")){String code=response.optString("code","DELETE_FAILED");runOnUiThread(()->Toast.makeText(this,"Não foi possível excluir: "+code,Toast.LENGTH_LONG).show());if(shopSocket!=null){shopSocket.close();shopSocket=null;}}
+        }catch(Exception ignored){}});
+        shopSocket.start();try{JSONObject auth=new JSONObject();auth.put("type","auth_resume");auth.put("token",token);shopSocket.send(auth.toString());}catch(Exception e){shopSocket.close();shopSocket=null;}
     }
 
     void sendAccountAuth(boolean register) {
