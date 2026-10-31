@@ -41,9 +41,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install WiX Toolset for jpackage
-        shell: pwsh
-        run: choco install wixtoolset --version=3.14.1 -y --no-progress
       - name: Compile desktop game and prepare resources
         shell: pwsh
         run: |
@@ -57,10 +54,10 @@ jobs:
       - name: Package EXE installer
         shell: pwsh
         run: |
-          jpackage --type exe --name SneakySnakes --app-version 3.0.0 --input build --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/installer --win-menu --win-shortcut --vendor "SneakySnakes"
+          jpackage --type app-image --name SneakySnakes --app-version 3.0.0 --input build --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/installer --win-menu --win-shortcut --vendor "SneakySnakes"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Upload EXE
+      - name: Upload Windows app (EXE launcher)
         uses: actions/upload-artifact@v4
         with:
           name: SneakySnakes-Windows-EXE
-          path: build/installer/*.exe
+          path: build/installer/SneakySnakes/
