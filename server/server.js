@@ -384,10 +384,14 @@ const id = nextId++;
                 break;
             }
             case 'respawn': {
-                const [rx, ry] = Array.isArray(msg.head) ? msg.head : [32, 32];
+                if (player.alive) break;
+                const rx = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 9) - 4));
+                const ry = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() *  nine()) - 4));
                 player.alive = true; player.body = [];
                 for (let i = 0; i < 4; i++) player.body.push([rx - i, ry]);
                 player.dir = [1, 0]; player.score = 0;
+                send(ws, { type: 'respawned', x: rx, y: ry });
+                broadcastAll(buildStatePayload());
                 break;
             }
         }
