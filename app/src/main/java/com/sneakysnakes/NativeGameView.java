@@ -246,20 +246,28 @@ public class NativeGameView extends View {
             if(offline) spawnLocalFood();
         }
 
-        for(int[] a:coins) if(a[0]==x&&a[1]==y) {
-            coins.remove(a); coinsN+=3; NativeAudio.play("eat");
-            if(!offline) {
-                send("{\"type\":\"coin_collect\",\"x\":"+x+",\"y\":"+y+"}");
-            } else {
-                if(getContext() instanceof Activity) {
+        boolean coinCollected=false;
+        for(int ci=0;ci<coins.size();ci++) {
+            int[] coin=coins.get(ci);
+            if(coin[0]==x&&coin[1]==y) {
+                coins.remove(ci);
+                coinsN+=3;
+                coinCollected=true;
+                NativeAudio.play("eat");
+                if(!offline) send("{\\"type\\":\\"coin_collect\\",\\"x\\":"+x+",\\"y\\":"+y+"}");
+                else if(getContext() instanceof Activity) {
                     Activity activity=(Activity)getContext();
                     android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
                     int balance=Math.max(0,prefs.getInt("offline_coins",0));
                     prefs.edit().putInt("offline_coins",balance+3).apply();
                 }
-                while(coins.size()<targetOfflineCoins()) spawnLocalCoin();
+                break;
             }
-            break;
+        }
+        if(coinCollected&&offline) {
+            // Infinite Mode keeps replacing coins immediately after collection.
+            if("INFINITE".equals(mode)) spawnLocalCoin();
+            while(coins.size()<targetOfflineCoins()) spawnLocalCoin();
         }
         for(int[] a:apples) if(a[0]==x&&a[1]==y) {
             apples.remove(a); score+=50; applesN++; addXp(25); NativeAudio.play("eat");
