@@ -322,6 +322,44 @@ public class MainActivity extends Activity {
             .apply();
     }
 
+    void requestShopAction(String action,String skinId) {
+        String url=getPreferences(0).getString("last_server_url","");
+        String token=getPreferences(0).getString("account_token","");
+        if(!url.startsWith("wss://")||token.isEmpty()) {
+            Toast.makeText(this,"Entre em uma conta usando um servidor seguro (WSS).",Toast.LENGTH_LONG).show();return;
+        }
+        if(shopSocket!=null)shopSocket.close();
+        final boolean[] sent={false};
+        shopSocket=new NativeSocket(url,raw->{
+            try {
+                JSONObject response=new JSONObject(raw);
+                String type=response.optString("type");
+                if(type.equals("auth_resumed")&&!sent[0]) {
+                    sent[0]=true;
+                    JSONObject request=new JSONObject();request.put("type",action);request.put("skinId",skinId);
+                    shopSocket.send(request.toString());
+                } else if(type.equals("shop_result")) {
+                    if(response.optBoolean("accepted")) {
+                        JSONObject profile=response.optJSONObject("profile");
+                        if(profile!=null)saveAccountProfile(profile);
+                        runOnUiThread(()->{Toast.makeText(this,"Loja sincronizada!",Toast.LENGTH_SHORT).show();renderShop();});
+                    } else {
+                        String code=response.optString("code","SHOP_FAILED");
+                        runOnUiThread(()->Toast.makeText(this,"Não foi possível concluir: "+code,Toast.LENGTH_LONG).show());
+                    }
+                    if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+                } else if(type.equals("auth_error")||type.equals("account_error")) {
+                    String code=response.optString("code","ACCOUNT_ERROR");
+                    runOnUiThread(()->Toast.makeText(this,"Conta: "+code,Toast.LENGTH_LONG).show());
+                    if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+                }
+            } catch(Exception ignored) {}
+        });
+        shopSocket.start();
+        try { JSONObject auth=new JSONObject();auth.put("type","auth_resume");auth.put("token",token);shopSocket.send(auth.toString()); }
+        catch(Exception e) { shopSocket.close();shopSocket=null; }
+    }
+
     void showShop() {
         shopVisible=true;
         base("LOJA DE SKINS","Moedas e compras salvas neste celular");
@@ -357,13 +395,13 @@ public class MainActivity extends Activity {
             row.addView(action,new LinearLayout.LayoutParams(dp(112),dp(42)));
             action.setEnabled(!owned || !equippedSkin().equals(id));
             action.setOnClickListener(v->{
-                if(owned){
-                    getPreferences(0).edit().putString("server_equipped_skin",id).apply();
-                    Toast.makeText(this,SKIN_NAMES[indexOfSkin(id)]+" equipada!",Toast.LENGTH_SHORT).show();
-                }else{
-                    Toast.makeText(this,SKIN_COSTS[indexOfSkin(id)]>0?"A compra online estará disponível após conectar sua conta.":"Consiga a pontuação necessária em uma partida para desbloquear!",Toast.LENGTH_SHORT).show(); return;
+                if(owned) {
+                    requestShopAction("shop_equip",id);
+                } else if(SKIN_COSTS[indexOfSkin(id)]>0) {
+                    requestShopAction("shop_buy",id);
+                } else {
+                    Toast.makeText(this,"Consiga a pontuação necessária em uma partida para desbloquear!",Toast.LENGTH_SHORT).show();
                 }
-                renderShop();
             });
         }
         scroll.addView(list);LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,0,1);slp.topMargin=dp(6);root.addView(scroll,slp);
