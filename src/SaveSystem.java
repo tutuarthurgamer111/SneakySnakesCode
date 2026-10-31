@@ -114,7 +114,13 @@ public class SaveSystem {
         "befc3fe2190c0f2285e869969387529b",
         "4355c05190ac223e8996e12be3c6d5b2"
     };
-    private static final int[] KEY_ORDER = {37, 4, 82, 19, 63, 11, 95, 28, 54, 7};
+    private static final int[] ORDER_MASKED = {0xA7, 0x5C, 0xD2, 0x31, 0x89, 0xE4, 0x6B, 0xF0, 0x42, 0xBD};
+    private static final int[] ORDER_MASK = {0x80, 0x58, 0x80, 0x22, 0xA6, 0xEF, 0x08, 0xEC, 0x16, 0xBA};
+    private static int[] keyOrder() {
+        int[] order = new int[ORDER_MASKED.length];
+        for (int i = 0; i < order.length; i++) order[i] = ORDER_MASKED[i] ^ ORDER_MASK[i];
+        return order;
+    }
 
     public int highScore=0, gamesPlayed=0, foodsEaten=0, deaths=0, bestCombo=0;
     public int highestLevel=1, coins=0;
@@ -191,7 +197,7 @@ public class SaveSystem {
     private byte[] encrypt(String plain) throws Exception {
         byte[] data=plain.getBytes(StandardCharsets.UTF_8);
         SecureRandom random=new SecureRandom();
-        for(int idx:KEY_ORDER) {
+        for(int idx:keyOrder()) {
             byte[] nonce=new byte[NONCE_LENGTH]; random.nextBytes(nonce);
             Cipher c=Cipher.getInstance("AES/GCM/NoPadding");
             c.init(Cipher.ENCRYPT_MODE,new SecretKeySpec(hex(KEY_POOL[idx]),"AES"),new GCMParameterSpec(128,nonce));
@@ -207,12 +213,12 @@ public class SaveSystem {
     private String decrypt(byte[] stored) throws Exception {
         if(!isEncrypted(stored)) throw new IOException("Unknown save format");
         byte[] data=Arrays.copyOfRange(stored,MAGIC.length,stored.length);
-        for(int i=KEY_ORDER.length-1;i>=0;i--) {
+        for(int i=keyOrder().length-1;i>=0;i--) {
             if(data.length<=NONCE_LENGTH) throw new IOException("Incomplete save layer");
             byte[] nonce=Arrays.copyOfRange(data,0,NONCE_LENGTH);
             byte[] body=Arrays.copyOfRange(data,NONCE_LENGTH,data.length);
             Cipher c=Cipher.getInstance("AES/GCM/NoPadding");
-            c.init(Cipher.DECRYPT_MODE,new SecretKeySpec(hex(KEY_POOL[KEY_ORDER[i]]),"AES"),new GCMParameterSpec(128,nonce));
+            c.init(Cipher.DECRYPT_MODE,new SecretKeySpec(hex(KEY_POOL[keyOrder()[i]]),"AES"),new GCMParameterSpec(128,nonce));
             data=c.doFinal(body);
         }
         return new String(data,StandardCharsets.UTF_8);
