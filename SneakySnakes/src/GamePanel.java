@@ -1320,9 +1320,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         String serverUrl = dialog.getSelectedUrl();
         if (serverUrl == null || serverUrl.trim().isEmpty()) return;
 
+        final String finalUrl = serverUrl.trim();
+        if (!AccountSession.ensureLogin(frame, finalUrl)) return;
         SoundSystem.stopMusic();
         final String finalName = name;
-        final String finalUrl  = serverUrl.trim();
         OnlineGamePanel ogp = new OnlineGamePanel(finalName, finalUrl, () -> {
             SwingUtilities.invokeLater(() -> {
                 frame.getContentPane().removeAll();
