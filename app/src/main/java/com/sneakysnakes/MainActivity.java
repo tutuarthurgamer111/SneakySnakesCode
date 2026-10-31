@@ -18,7 +18,7 @@ public class MainActivity extends Activity {
     NativeGameView game;
     EditText name, host, port;
     Switch secure;
-    static final String SERVER_API = "https://server-list-orpin.vercel.app/api/servers";
+    static final String SERVER_API = "https://sneakysnakes-server-list.vercel.app/api/servers";
     LinearLayout root;
     NativeSocket shopSocket;
     boolean shopVisible=false;
