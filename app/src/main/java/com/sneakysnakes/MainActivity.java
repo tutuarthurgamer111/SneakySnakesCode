@@ -117,7 +117,13 @@ public class MainActivity extends Activity {
             TextView sub=text(subtitle,12,0xff8fa9bf);
             root.addView(sub,new LinearLayout.LayoutParams(-1,dp(22)));
         }
-        setContentView(root);
+        ScrollView scroll=new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.addView(root,new ScrollView.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT));
+        setContentView(scroll);
     }
 
     void addButton(String label,boolean primary,Runnable action) {
