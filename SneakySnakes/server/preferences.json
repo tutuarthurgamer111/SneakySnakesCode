@@ -1,0 +1,8 @@
+{
+  "worldTiles": 64,
+    "foodCount": 30,
+  "coinCount": 15,
+  "stateRate": 50,
+  "foodRate": 200,
+  "coinRate": 999999
+}
