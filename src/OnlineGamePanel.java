@@ -522,6 +522,7 @@ case "state":
                 int[] coin = serverCoins.get(ci);
                 if (coin[0] == newHX && coin[1] == newHY) {
                     myCoins++;
+                    if (saveRef != null) { saveRef.coins += 3; saveRef.save(); }
                     serverCoins.remove(ci);
                     particles.spawnFoodCollect(newHX*TILE+TILE/2f, newHY*TILE+TILE/2f, new Color(255,215,0), 8);
                     SoundSystem.play("eat");
