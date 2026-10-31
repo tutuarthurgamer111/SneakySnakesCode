@@ -1,6 +1,7 @@
 package com.sneakysnakes;
 
 import android.content.res.AssetManager;
+import android.content.res.AssetFileDescriptor;
 import android.media.*;
 import java.io.*;
 import java.util.*;
