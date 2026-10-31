@@ -43,7 +43,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     private final ShopSystem     shop      = new ShopSystem();
     private final Random         rng       = new Random();
 
-    private static final String ICON_PATH = "SneakySnakes/Resources/content/icons/";
+    private static final String ICON_PATH = "content/icons/";
     private final java.awt.image.BufferedImage skinShopIcon = loadIcon("skinshop.png");
     private final java.awt.image.BufferedImage coinIcon     = loadIcon("coin.png");
     private final java.awt.image.BufferedImage moonIcon     = loadIcon("moon.png");
@@ -57,7 +57,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
     private static java.awt.image.BufferedImage loadIcon(String filename) {
         try {
-            java.io.File f = new java.io.File(ICON_PATH + filename);
+            java.io.File f = AppPaths.resourceFile(ICON_PATH + filename);
             if (f.exists()) return javax.imageio.ImageIO.read(f);
         } catch (Exception e) {
             System.err.println("[GamePanel] Could not load icon: " + filename);
@@ -67,7 +67,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
     private void loadCustomCursor() {
         try {
-            java.io.File f = new java.io.File("SneakySnakes/Resources/content/CursorDefault.png");
+            java.io.File f = AppPaths.resourceFile("content/CursorDefault.png");
             if (f.exists()) {
                 java.awt.image.BufferedImage cursorImg = javax.imageio.ImageIO.read(f);
                 Toolkit tk = Toolkit.getDefaultToolkit();
