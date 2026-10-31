@@ -112,7 +112,7 @@ function broadcastAll(obj) { const msg = JSON.stringify(obj); players.forEach(p 
 
 function buildStatePayload() {
     const plist = [];
-    players.forEach(p => plist.push({ id: p.id, name: p.name, skin: p.skin, body: p.body, dir: p.dir, alive: p.alive }));
+    players.forEach(p => plist.push({ id: p.id, name: p.name, skin: p.skin, body: p.body, dir: p.dir, alive: p.alive, score: p.score, coins: p.coins }));
     return { type: 'state', uptime: getUptime(), worldTiles: WORLD_TILES, players: plist };
 }
 
