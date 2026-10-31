@@ -22,7 +22,7 @@ import javax.imageio.ImageIO;
  */
 public class FaceSystem {
 
-    private static final String ASSET_PATH = "SneakySnakes/Resources/content/faces/";
+    private static final String ASSET_PATH = "content/faces/";
 
     // ── Tipos ────────────────────────────────────────────────────────────────
     public enum Face {
@@ -314,7 +314,7 @@ public class FaceSystem {
         if (tried[idx]) return images[idx];
         tried[idx] = true;
         try {
-            File f = new File(ASSET_PATH + face.name().toLowerCase() + ".png");
+            File f = AppPaths.resourceFile(ASSET_PATH + face.name().toLowerCase() + ".png");
             if (f.exists()) images[idx] = ImageIO.read(f);
         } catch (Exception ignored) {}
         return images[idx];
