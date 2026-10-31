@@ -27,7 +27,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     public static final int WIN_LENGTH = 60;
 
     // -- State machine
-    private enum Screen { MENU, PLAYING, PAUSED, GAME_OVER, VICTORY, SHOP, ONLINE, MODE_OPTIONS, SETTINGS, EDIT_PROFILE }
+    private enum Screen { MENU, PLAYING, PAUSED, GAME_OVER, VICTORY, SHOP, ONLINE, GAME_MODES, SETTINGS, EDIT_PROFILE }
     private Screen screen = Screen.MENU;
 
     // -- Sub-systems
@@ -37,6 +37,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     private final GameState      gs        = new GameState();
     private final ShopSystem     shop      = new ShopSystem();
     private final Random         rng       = new Random();
+    private String selectedGameMode = "NORMAL";
 
     private static final String ICON_PATH = "SneakySnakes/Resources/content/icons/";
     private final java.awt.image.BufferedImage skinShopIcon = loadIcon("skinshop.png");
@@ -124,6 +125,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     private boolean menuHover    = false;
 
     // -- Mode Options popup hover
+    private boolean normalModeHover   = false;
     private boolean partyModeHover    = false;
     private boolean infiniteModeHover = false;
     private boolean closeOptionsHover = false;
@@ -219,7 +221,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             case PLAYING:      updatePlaying(); break;
             case GAME_OVER:    updateGameOver(); break;
             case VICTORY:      updateVictory(); break;
-            case MODE_OPTIONS: updateMenu(); break; // keep particles moving
+            case GAME_MODES: updateMenu(); break; // keep particles moving
             default: break;
         }
     }
@@ -264,7 +266,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         int newHX = gs.bodyX[0] + gs.dirX;
         int newHY = gs.bodyY[0] + gs.dirY;
 
-        if (newHX < 0 || newHX >= COLS || newHY < 0 || newHY >= ROWS) { triggerGameOver(); return; }
+        if ("INFINITE".equals(selectedGameMode)) { if(newHX<0)newHX=COLS-1;else if(newHX>=COLS)newHX=0;if(newHY<0)newHY=ROWS-1;else if(newHY>=ROWS)newHY=0; } else if (newHX < 0 || newHX >= COLS || newHY < 0 || newHY >= ROWS) { triggerGameOver(); return; }
 
         int checkLen = (gs.pendingGrowth > 0) ? gs.length : gs.length - 1;
         for (int i = 0; i < checkLen; i++) {
@@ -298,7 +300,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
         while (foods.size() < targetFoodCount()) spawnOneFood();
 
-        if (gs.length >= WIN_LENGTH) triggerVictory();
+        if (gs.length >= WIN_LENGTH && !"INFINITE".equals(selectedGameMode)) triggerVictory();
     }
 
     private void eatFood(GameState.FoodRarity rarity, int fx, int fy) {
@@ -471,7 +473,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
         switch (screen) {
             case MENU:         drawMenu(g);    break;
-            case MODE_OPTIONS: drawMenu(g); drawModeOptionsPopup(g); break;
+            case GAME_MODES: drawMenu(g); drawModeOptionsPopup(g); break;
             case SETTINGS:     drawMenu(g); drawSettingsOverlay(g);  break;
             case EDIT_PROFILE: drawMenu(g); drawEditProfileOverlay(g); break;
             case SHOP:         drawShopScreen(g); break;
@@ -558,8 +560,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         drawRoundButton(g, 285, 326, 230, 44, "SKIN SHOP",
             shopHover ? new Color(200,150,50) : new Color(160,110,30), shopHover);
 
-        drawRoundButton(g, 285, 382, 230, 40, "MODE OPTIONS",
-            modeOptionsHover ? new Color(140,80,220) : new Color(100,50,180), modeOptionsHover);
+        drawRoundButton(g, 285, 382, 230, 40, "CONTA", modeOptionsHover ? new Color(80,190,150) : new Color(35,125,95), modeOptionsHover);
 
         // -- Skin selector row
         g.setFont(new Font("Arial", Font.BOLD, 18));
@@ -568,6 +569,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         FontMetrics sfm = g.getFontMetrics();
         int skinStrX = (WIDTH - sfm.stringWidth(skinStr))/2;
         g.drawString(skinStr, skinStrX, 444);
+        if(AccountSession.token().isEmpty()){g.setFont(new Font("Arial",Font.PLAIN,12));g.setColor(new Color(170,195,220,190));String hint="Para criar uma conta, vá em configurações e Conta";g.drawString(hint,(WIDTH-g.getFontMetrics().stringWidth(hint))/2,475);}
 
         drawMenuStats(g);
         drawSkinPreview(g, 640, 195, SkinSystem.current());
@@ -597,48 +599,17 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     }
 
     private void drawModeOptionsPopup(Graphics2D g) {
-        // Dark overlay
-        g.setColor(new Color(0,0,0,160));
-        g.fillRect(0, 0, WIDTH, HEIGHT);
-
-        // Popup panel
-        int pw=320, ph=220, px=(WIDTH-pw)/2, py=(HEIGHT-ph)/2;
-        // Glow border
-        for (int r=8; r>0; r-=2) {
-            g.setColor(new Color(100,80,220,(int)(20f*(r/8f))));
-            g.fillRoundRect(px-r, py-r, pw+r*2, ph+r*2, 20, 20);
-        }
-        g.setColor(new Color(12,10,30,230));
-        g.fillRoundRect(px, py, pw, ph, 16, 16);
-        g.setColor(new Color(120,90,220,150));
-        g.drawRoundRect(px, py, pw, ph, 16, 16);
-
-        // Title
-        g.setFont(new Font("Arial", Font.BOLD, 22));
-        g.setColor(new Color(180,180,180));
-        String t = "Gamemodes";
-        FontMetrics fm = g.getFontMetrics();
-        g.drawString(t, px + (pw - fm.stringWidth(t))/2, py+38);
-
-        // Divider
-        g.setColor(new Color(100,90,200,80));
-        g.drawLine(px+20, py+50, px+pw-20, py+50);
-
-        // Party Mode button
-        int bx = px + (pw/2 - 120), bw = 240, bh = 48;
-        drawRoundButton(g, bx, py+68, bw, bh, "Party Mode",
-            partyModeHover ? new Color(80,180,255) : new Color(50,130,220), partyModeHover);
-
-        // Infinite Mode button
-        drawRoundButton(g, bx, py+130, bw, bh, "Infinite Mode",
-            infiniteModeHover ? new Color(80,180,255) : new Color(50,130,220), infiniteModeHover);
-
-        // Close hint
-        g.setFont(new Font("Arial", Font.PLAIN, 12));
-        g.setColor(new Color(150,150,180,180));
-        String hint = "Press ESC to close";
-        fm = g.getFontMetrics();
-        g.drawString(hint, px + (pw-fm.stringWidth(hint))/2, py+ph-12);
+        g.setColor(new Color(0,0,0,165));g.fillRect(0,0,WIDTH,HEIGHT);
+        int pw=360,ph=280,px=moPopupX(),py=moPopupY();
+        for(int r=8;r>0;r-=2){g.setColor(new Color(70,120,220,(int)(20f*(r/8f))));g.fillRoundRect(px-r,py-r,pw+r*2,ph+r*2,20,20);}
+        g.setColor(new Color(10,16,32,238));g.fillRoundRect(px,py,pw,ph,18,18);g.setColor(new Color(80,150,230,150));g.drawRoundRect(px,py,pw,ph,18,18);
+        g.setFont(new Font("Arial",Font.BOLD,23));g.setColor(Color.WHITE);String title="GAME MODES";FontMetrics fm=g.getFontMetrics();
+        g.drawString(title,px+(pw-fm.stringWidth(title))/2,py+38);g.setColor(new Color(100,150,220,80));g.drawLine(px+22,py+50,px+pw-22,py+50);
+        int bx=moBtnX(),bw=260,bh=44;
+        drawRoundButton(g,bx,py+62,bw,bh,"Normal mode",normalModeHover?new Color(80,190,130):new Color(35,135,90),normalModeHover);
+        drawRoundButton(g,bx,py+116,bw,bh,"Party mode",partyModeHover?new Color(80,170,255):new Color(45,115,200),partyModeHover);
+        drawRoundButton(g,bx,py+170,bw,bh,"Infinite Mode",infiniteModeHover?new Color(80,170,255):new Color(45,115,200),infiniteModeHover);
+        g.setFont(new Font("Arial",Font.PLAIN,12));g.setColor(new Color(160,180,210,180));String hint="Press ESC to close";fm=g.getFontMetrics();g.drawString(hint,px+(pw-fm.stringWidth(hint))/2,py+ph-12);
     }
 
     // ========================================================
@@ -1129,9 +1100,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // ==========================================================
 
     // Mode Options popup internals
-    private int moPopupX() { return (WIDTH-320)/2; }
-    private int moPopupY() { return (HEIGHT-220)/2; }
-    private int moBtnX()   { return moPopupX() + (320/2 - 120); }
+    private int moPopupX() { return (WIDTH-360)/2; }
+    private int moPopupY() { return (HEIGHT-280)/2; }
+    private int moBtnX()   { return moPopupX() + 50; }
 
     // ==========================================================
     // INPUT
@@ -1144,12 +1115,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
         switch (screen) {
             case MENU:
-                if (key==KeyEvent.VK_ENTER||key==KeyEvent.VK_SPACE) startNewGame(); // Offline shortcut
+                if (key==KeyEvent.VK_ENTER||key==KeyEvent.VK_SPACE) { selectedGameMode="NORMAL"; startNewGame(); } // Normal mode shortcut
                 if (key==KeyEvent.VK_LEFT ||key==KeyEvent.VK_A)     SkinSystem.cyclePrev();
                 if (key==KeyEvent.VK_RIGHT||key==KeyEvent.VK_D)     SkinSystem.cycleNext();
                 if (key==KeyEvent.VK_S)  { screen=Screen.SHOP; SoundSystem.playClick(); }
                 break;
-            case MODE_OPTIONS:
+            case GAME_MODES:
                 if (key==KeyEvent.VK_ESCAPE) { screen=Screen.MENU; SoundSystem.playClick(); }
                 break;
             case SETTINGS:
@@ -1210,8 +1181,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 }
                 // Offline Mode
                 if (inRect(mx,my,285,263,230,50)) {
-                    SoundSystem.playClick();
-                    startNewGame();
+                    SoundSystem.playClick(); screen=Screen.GAME_MODES;
                 }
                 // Skin Shop
                 if (inRect(mx,my,285,326,230,44)) {
@@ -1220,8 +1190,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 }
                 // Mode Options
                 if (inRect(mx,my,285,382,230,40)) {
-                    SoundSystem.playClick();
-                    screen=Screen.MODE_OPTIONS;
+                    SoundSystem.playClick(); openAccountManager();
                 }
                 // Skin arrows
                 if (inRect(mx,my,190,430,80,30))  { SoundSystem.playClick(); SkinSystem.cyclePrev(); }
@@ -1231,21 +1200,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 if (inRect(mx,my,12, blY2+8, 64, 64)) { SoundSystem.playClick(); screen=Screen.SETTINGS; }
                 if (inRect(mx,my,84, blY2+8, 64, 64)) { SoundSystem.playClick(); editNameBuffer=settings.playerName; editNameFocus=false; screen=Screen.EDIT_PROFILE; }
                 break;
-            case MODE_OPTIONS:
-                // Party Mode button (display-only)
-                if (inRect(mx,my, moBtnX(), moPopupY()+68, 240, 48)) {
-                    SoundSystem.playClick();
-                    // TODO: implement Party Mode
-                }
-                // Infinite Mode button (display-only)
-                if (inRect(mx,my, moBtnX(), moPopupY()+130, 240, 48)) {
-                    SoundSystem.playClick();
-                    // TODO: implement Infinite Mode
-                }
-                // Click outside popup = close
-                if (!inRect(mx,my, moPopupX(), moPopupY(), 320, 220)) {
-                    screen=Screen.MENU;
-                }
+            case GAME_MODES:
+                if(inRect(mx,my,moBtnX(),moPopupY()+62,260,44)){selectedGameMode="NORMAL";SoundSystem.playClick();startNewGame();}
+                else if(inRect(mx,my,moBtnX(),moPopupY()+116,260,44)){selectedGameMode="PARTY";SoundSystem.playClick();startNewGame();}
+                else if(inRect(mx,my,moBtnX(),moPopupY()+170,260,44)){selectedGameMode="INFINITE";SoundSystem.playClick();startNewGame();}
+                else if(!inRect(mx,my,moPopupX(),moPopupY(),360,280))screen=Screen.MENU;
                 break;
             case SHOP:
                 boolean bought = shop.handleClick(mx, my, save);
@@ -1297,6 +1256,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         }
     }
 
+    private void openAccountManager() {
+        JFrame frame=(JFrame)SwingUtilities.getWindowAncestor(this);if(frame==null)return;
+        ChooseServerDialog dialog=new ChooseServerDialog(frame);dialog.setVisible(true);String url=dialog.getSelectedUrl();
+        if(url==null||url.trim().isEmpty())return;AccountSession.manageAccount(frame,url.trim());requestFocusInWindow();
+    }
+
     private void launchOnlineMode() {
         JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);
         if (frame == null) return;
@@ -1339,7 +1304,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     @Override public void mouseReleased(MouseEvent e) {}
     @Override public void mouseEntered(MouseEvent e) {}
     @Override public void mouseExited(MouseEvent e)  {
-        onlineHover=offlineHover=shopHover=modeOptionsHover=false;
+        onlineHover=offlineHover=shopHover=modeOptionsHover=false;normalModeHover=partyModeHover=infiniteModeHover=false;
         restartHover=menuHover=false;
         partyModeHover=infiniteModeHover=closeOptionsHover=false;
         skinLeftHover=skinRightHover=false;
@@ -1357,6 +1322,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         offlineHover     = inRect(mx,my,285,263,230,50);
         shopHover        = inRect(mx,my,285,326,230,44);
         modeOptionsHover = inRect(mx,my,285,382,230,40);
+        normalModeHover=screen==Screen.GAME_MODES&&inRect(mx,my,moBtnX(),moPopupY()+62,260,44);
+        partyModeHover=screen==Screen.GAME_MODES&&inRect(mx,my,moBtnX(),moPopupY()+116,260,44);
+        infiniteModeHover=screen==Screen.GAME_MODES&&inRect(mx,my,moBtnX(),moPopupY()+170,260,44);
         skinLeftHover    = inRect(mx,my,190,430,80,30);
         skinRightHover   = inRect(mx,my,530,430,80,30);
         int blYh = HEIGHT-90;
@@ -1388,8 +1356,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             menuHover    = inRect(mx,my,px+pw-190, py+ph-65,170,45);
         }
 
-        partyModeHover    = screen==Screen.MODE_OPTIONS && inRect(mx,my, moBtnX(), moPopupY()+68,  240, 48);
-        infiniteModeHover = screen==Screen.MODE_OPTIONS && inRect(mx,my, moBtnX(), moPopupY()+130, 240, 48);
+        partyModeHover    = screen==Screen.GAME_MODES && inRect(mx,my, moBtnX(), moPopupY()+68,  240, 48);
+        infiniteModeHover = screen==Screen.GAME_MODES && inRect(mx,my, moBtnX(), moPopupY()+130, 240, 48);
 
         if (screen==Screen.SHOP) shop.handleMouseMove(mx,my);
         repaint();
