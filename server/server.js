@@ -319,6 +319,7 @@ const id = nextId++;
                 break;
             }
             case 'coin_collect': {
+                if (!player.alive) break;
                 const cx = msg.x, cy = msg.y;
                 const ci = checkCoinEaten(cx, cy);
                 if (ci >= 0) {
