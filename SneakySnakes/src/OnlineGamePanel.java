@@ -811,7 +811,7 @@ case "state":
     }
 
     private void drawEyes(Graphics2D g,int sx,int sy,int sz,int dx,int dy) {
-        int off=sz/4, es=Math.max(2,sz/5);
+        int off=Math.max(2,sz/4), es=Math.max(4,sz/3);
         int ex1,ey1,ex2,ey2;
         if      (dx==1)  { ex1=sx+sz-off-2;ey1=sy+off;     ex2=sx+sz-off-2;ey2=sy+sz-off*2; }
         else if (dx==-1) { ex1=sx+2;        ey1=sy+off;     ex2=sx+2;        ey2=sy+sz-off*2; }
