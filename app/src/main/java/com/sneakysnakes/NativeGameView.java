@@ -158,7 +158,6 @@ public class NativeGameView extends View {
 
     void addXp(int amount) {
         xp+=amount;
-        if(!offline) return;
         while(level<8 && xp>=xpForNextLevel()) {
             xp-=xpForNextLevel();
             level++;
@@ -176,7 +175,12 @@ public class NativeGameView extends View {
         if(!connected||!alive||snake.isEmpty())return;
         dx=nx; dy=ny;
         int x=snake.get(0)[0]+dx,y=snake.get(0)[1]+dy;
-        if(x<0||y<0||x>=world||y>=world) { if(!offline)send("{\"type\":\"die\",\"reason\":\"border\"}"); die(true); return; }
+        if(offline && "INFINITE".equals(mode)) {
+            if(x<0)x=world-1; else if(x>=world)x=0;
+            if(y<0)y=world-1; else if(y>=world)y=0;
+        } else if(x<0||y<0||x>=world||y>=world) {
+            if(!offline)send("{\"type\":\"die\",\"reason\":\"border\"}"); die(true); return;
+        }
         for(int i=1;i<snake.size()-1;i++) if(snake.get(i)[0]==x&&snake.get(i)[1]==y) {
             if(!offline)send("{\"type\":\"die\",\"reason\":\"self\"}"); die(true); return;
         }
