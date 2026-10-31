@@ -14,6 +14,23 @@ android {
         versionName "4.0.1"
     }
 
+    signingConfigs {
+        release {
+            storeFile file(System.getenv("ANDROID_SIGNING_KEYSTORE") ?: "upload-key.jks")
+            storePassword System.getenv("ANDROID_SIGNING_STORE_PASSWORD")
+            keyAlias System.getenv("ANDROID_SIGNING_KEY_ALIAS")
+            keyPassword System.getenv("ANDROID_SIGNING_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        debug {
+            if (System.getenv("ANDROID_SIGNING_KEYSTORE") != null) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
     sourceSets {
         main {
             assets.srcDirs += ["../SneakySnakes/Resources/content"]
