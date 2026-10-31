@@ -18,7 +18,7 @@ public class MainActivity extends Activity {
     NativeGameView game;
     EditText name, host, port;
     Switch secure;
-    static final String SERVER_API = "https://sneakysnakes-server-list.vercel.app/servers";
+    static final String SERVER_API = "https://server-list-orpin.vercel.app/api/servers";
     LinearLayout root;
     static final String[] SKIN_IDS={"obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
     static final String[] SKIN_NAMES={"Obsidian","Lava","Ice Crystal","Midnight","Toxic","Rich","Snake Scale","Pixel Camo","Neon Grid","Galaxy","Fire","Tomatoes"};
@@ -56,8 +56,8 @@ public class MainActivity extends Activity {
 
     Button button(String value,boolean primary) {
         Button b=new Button(this); b.setText(value); b.setAllCaps(false);
-        b.setTextColor(Color.WHITE); b.setTextSize(15); b.setGravity(Gravity.CENTER);
-        b.setMinHeight(dp(46)); b.setMinimumHeight(dp(46));
+        b.setTextColor(Color.WHITE); b.setTextSize(14); b.setGravity(Gravity.CENTER);
+        b.setMinHeight(dp(40)); b.setMinimumHeight(dp(40));
         b.setPadding(dp(12),0,dp(12),0);
         b.setBackground(shape(primary?0xff176b91:0xff15283b,primary?0xff55c9ed:0xff34516b));
         b.setOnTouchListener((v,e)->{if(e.getAction()==MotionEvent.ACTION_DOWN)NativeAudio.play("click");return false;});
@@ -66,11 +66,11 @@ public class MainActivity extends Activity {
 
     void base(String title,String subtitle) {
         root=new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(26),dp(20),dp(26),dp(20));
+        root.setGravity(Gravity.CENTER_HORIZONTAL); root.setPadding(dp(20),dp(10),dp(20),dp(10));
         root.setBackgroundColor(0xff080e18);
         TextView logo=text("SNEAKYSNAKES",29,Color.WHITE);
         logo.setTypeface(Typeface.create("sans-serif-light",Typeface.NORMAL));
-        root.addView(logo,new LinearLayout.LayoutParams(-1,dp(62)));
+        root.addView(logo,new LinearLayout.LayoutParams(-1,dp(46)));
         View line=new View(this); line.setBackgroundColor(0xff26394b);
         root.addView(line,new LinearLayout.LayoutParams(-1,dp(1)));
         if(title!=null) {
@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
         }
         if(subtitle!=null) {
             TextView sub=text(subtitle,12,0xff8fa9bf);
-            root.addView(sub,new LinearLayout.LayoutParams(-1,dp(28)));
+            root.addView(sub,new LinearLayout.LayoutParams(-1,dp(22)));
         }
         setContentView(root);
     }
@@ -95,12 +95,12 @@ public class MainActivity extends Activity {
     void showHome() {
         base(null,null);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(32)));
+        root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(14)));
         addButton("JOGAR",true,()->showPlayMenu());
         addButton("LOJA DE SKINS",false,()->showShop());
         addButton("CONFIGURAÇÕES",false,()->showSettings());
-        root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(18)));
-        root.addView(text("ANDROID NATIVO  •  SNEAKYSNAKES",11,0xff71879b),new LinearLayout.LayoutParams(-1,dp(30)));
+        root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(8)));
+        root.addView(text("ANDROID NATIVO  •  SNEAKYSNAKES",11,0xff71879b),new LinearLayout.LayoutParams(-1,dp(22)));
     }
 
     void showPlayMenu() {
@@ -171,12 +171,16 @@ public class MainActivity extends Activity {
             String chosen=null,error=null; int count=0; HttpURLConnection c=null;
             try {
                 c=(HttpURLConnection)new URL(SERVER_API).openConnection();
-                c.setConnectTimeout(10000);c.setReadTimeout(15000);c.setRequestProperty("Accept","application/json");
+                c.setRequestMethod("GET");c.setConnectTimeout(12000);c.setReadTimeout(20000);c.setUseCaches(false);c.setInstanceFollowRedirects(true);c.setRequestProperty("Accept","application/json");c.setRequestProperty("User-Agent","SneakySnakes-Android");
+                int status=c.getResponseCode();
+                if(status!=200) throw new IOException("HTTP "+status);
                 StringBuilder body=new StringBuilder();
                 try(BufferedReader r=new BufferedReader(new InputStreamReader(c.getInputStream(),"UTF-8"))){
                     String line;while((line=r.readLine())!=null)body.append(line);
                 }
-                JSONObject json=new JSONObject(body.toString());JSONArray servers=json.optJSONArray("servers");
+                JSONObject json=new JSONObject(body.toString());
+                if(!json.optBoolean("success",false)) throw new IOException("A API não confirmou a lista.");
+                JSONArray servers=json.optJSONArray("servers");
                 if(servers!=null){ArrayList<String> valid=new ArrayList<>();
                     for(int i=0;i<servers.length();i++){JSONObject s=servers.optJSONObject(i);if(s==null)continue;
                         String h=s.optString("host","").trim();int p=s.optInt("port",3000);
