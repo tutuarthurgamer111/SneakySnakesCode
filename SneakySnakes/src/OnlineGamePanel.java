@@ -323,7 +323,10 @@ case "state":
     private void applyAccountProfile(String profile) {
         if(saveRef==null)return;
         int balance=jsonInt(profile,"coins");
-        if(balance>=0)saveRef.coins=balance;
+        if(balance>=0) {
+            saveRef.coins=balance;
+            myCoins=balance;
+        }
         String equipped=jsonString(profile,"equippedSkin");
         if(equipped!=null) {
             SkinSystem.setById(equipped);
