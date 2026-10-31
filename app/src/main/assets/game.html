@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#101522">
+<title>SneakySnakes</title>
+<style>
+:root{color-scheme:dark;--bg:#101522;--panel:#171f31;--blue:#329fe0;--green:#269b5a;--gold:#d49a27;--purple:#7543bb}
+*{box-sizing:border-box;touch-action:manipulation}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:Arial,sans-serif;color:#fff;user-select:none}
+#root{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#1b2940,#0b101b)}
+#game{width:100%;height:100%;display:block}
+.screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:18px;overflow:auto;background:rgba(8,12,22,.78)}
+.screen.show{display:flex}
+.panel{width:min(92vw,520px);max-height:95%;overflow:auto;background:rgba(18,27,44,.97);border:1px solid #385477;border-radius:20px;padding:22px;box-shadow:0 12px 50px #0009;text-align:center}
+h1{font-size:clamp(30px,6vw,54px);margin:4px 0 2px;letter-spacing:1px;text-shadow:0 0 18px #48caff}
+h2{margin:5px 0 18px;color:#9fd8ff}
+.sub{color:#9bb2d0;margin:4px 0 18px}
+button{border:0;border-radius:12px;color:#fff;font-weight:bold;font-size:clamp(14px,2.2vw,18px);padding:13px 16px;min-height:44px;background:#33445f;box-shadow:inset 0 1px #ffffff24;cursor:pointer}
+button:active{transform:scale(.97);filter:brightness(1.2)}
+.menuBtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px auto;max-width:440px}
+.wide{grid-column:1/-1}
+.online{background:#267fb8}.classic{background:#23844c}.party{background:#8b4bb4}.infinite{background:#b87920}.shop{background:#806026}.muted{background:#35425a}
+.row{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:10px 0}
+.small{font-size:13px;color:#9fb2ca}
+#hud{position:absolute;top:8px;left:8px;display:none;background:#101a2bd9;border:1px solid #ffffff22;border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.55;pointer-events:none}
+#pauseBtn{position:absolute;top:8px;right:8px;display:none;background:#233550;padding:8px 14px;min-height:38px}
+#touchControls{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:0;right:0;display:none;justify-content:space-between;align-items:end;padding:0 18px;pointer-events:none}
+#pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,48px);gap:5px;pointer-events:auto}
+#pad button{padding:0;font-size:21px;background:#233d5dd9;border:1px solid #8dc9ff55;min-height:46px}
+#pad .empty{visibility:hidden}
+#sprint{pointer-events:auto;background:#a35c25dd;border:1px solid #ffc47a66;border-radius:50%;width:76px;height:76px;padding:0;font-size:12px}
+#message{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:12px;color:#9fb2ca;white-space:nowrap;pointer-events:none}
+.skinList{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.skin{background:#24334b;border:1px solid #ffffff20;padding:10px}
+.skin.selected{border:2px solid #4fc4ff}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid #476080;background:#0d1524;color:#fff;font-size:16px;margin:6px 0}
+#toast{position:absolute;top:12%;left:50%;transform:translateX(-50%);padding:10px 16px;border-radius:10px;background:#172a43;display:none;z-index:9}
+@media(orientation:portrait){.panel{width:96vw;padding:16px}.menuBtns{grid-template-columns:1fr 1fr}#pad{grid-template-columns:repeat(3,46px);grid-template-rows:repeat(2,42px)}#pad button{min-height:40px}#sprint{width:65px;height:65px}}
+</style>
+</head>
+<body>
+<div id="root">
+<canvas id="game"></canvas>
+<div id="menu" class="screen show"><div class="panel">
+<h1>SneakySnakes</h1><div class="sub">Sneak' em!</div>
+<div class="menuBtns">
+<button class="online wide" onclick="showOnline()">ONLINE MODE</button>
+<button class="classic" onclick="startGame('classic')">CLASSIC</button>
+<button class="party" onclick="startGame('party')">PARTY MODE</button>
+<button class="infinite wide" onclick="startGame('infinite')">INFINITE MODE</button>
+<button class="shop" onclick="showShop()">SKIN SHOP</button>
+<button class="muted" onclick="showSettings()">SETTINGS</button>
+</div>
+<div id="stats" class="small"></div>
+<div class="row"><button class="muted" onclick="cycleSkin(-1)">◀ SKIN</button><span id="skinName" style="align-self:center;color:#9fd8ff">Blue</span><button class="muted" onclick="cycleSkin(1)">SKIN ▶</button></div>
+<div class="small">Touch the arrows to steer. Hold SPRINT to move faster.</div>
+</div></div>
+<div id="onlineScreen" class="screen"><div class="panel">
+<h2>ONLINE MULTIPLAYER</h2><p class="sub">Choose an active server or enter an address.</p>
+<input id="playerName" maxlength="24" placeholder="Your player name" value="Player">
+<input id="serverAddress" placeholder="ws://host:3000" value="ws://163.176.148.122:3000">
+<div class="row"><button class="online" onclick="connectOnline()">CONNECT</button><button class="muted" onclick="refreshServers()">REFRESH LIST</button></div>
+<div id="serverList" class="small">Server list not loaded yet.</div>
+<button class="muted wide" onclick="showScreen('menu')">BACK</button>
+</div></div>
+<div id="shopScreen" class="screen"><div class="panel"><h2>SKIN SHOP</h2><div id="coins" class="sub"></div><div id="skinList" class="skinList"></div><button class="muted wide" onclick="showScreen('menu')">BACK</button></div></div>
+<div id="settingsScreen" class="screen"><div class="panel"><h2>SETTINGS</h2><p class="sub">Game preferences</p><label><input id="soundToggle" type="checkbox" checked style="width:auto"> Sound effects (browser audio)</label><div class="row"><button class="muted" onclick="toggleTheme()">DAY / NIGHT</button><button class="muted" onclick="showScreen('menu')">BACK</button></div></div></div>
+<div id="endScreen" class="screen"><div class="panel"><h2 id="endTitle">GAME OVER</h2><div id="endStats" class="sub"></div><div class="row"><button class="classic" onclick="startGame(currentMode)">PLAY AGAIN</button><button class="muted" onclick="goMenu()">MENU</button></div></div></div>
+<div id="pauseScreen" class="screen"><div class="panel"><h2>PAUSED</h2><div class="row"><button class="classic" onclick="resumeGame()">RESUME</button><button class="muted" onclick="goMenu()">QUIT TO MENU</button></div></div></div>
+<div id="hud"></div><button id="pauseBtn" onclick="pauseGame()">Ⅱ</button>
+<div id="touchControls"><div id="pad">
+<button class="empty"></button><button data-dir="up">▲</button><button class="empty"></button>
+<button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
+</div><button id="sprint">SPRINT</button></div>
+<div id="message"></div><div id="toast"></div>
+</div>
+<script>
+(()=>{
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const W=800,H=600,T=20,C=40,R=30,API='https://sneakysnakes-server-list.vercel.app/api/servers';
+const skins=[{id:'bright_blue',name:'Bright Blue',color:'#36a9ff',cost:0},{id:'green',name:'Green',color:'#48d477',cost:80},{id:'purple',name:'Purple',color:'#ad70ff',cost:160},{id:'gold',name:'Gold',color:'#ffd04a',cost:300},{id:'fire',name:'Fire',color:'#ff7045',cost:500},{id:'galaxy',name:'Galaxy',color:'#8d82ff',cost:800}];
+let save=loadSave(),screen='menu',currentMode='classic',snake=[],foods=[],direction={x:1,y:0},next={x:1,y:0},score=0,coins=0,level=1,xp=0,combo=1,lastFood=0,foodsEaten=0,step=0,lastTick=0,acc=0,alive=false,paused=false,night=false,sprint=false,ws=null,online=false,players={},worldTiles=64,serverFoods=[],serverCoins=[],serverId=0,onlineScore=0,onlineCoins=0,skinIndex=0,partyEvent='',partyTimer=0,toastTimer=0;
+function loadSave(){try{return Object.assign({coins:0,high:0,games:0,deaths:0,foods:0,skin:'bright_blue',unlocked:['bright_blue'],name:'Player'},JSON.parse(localStorage.getItem('snakes-save')||'{}'))}catch(e){return{coins:0,high:0,games:0,deaths:0,foods:0,skin:'bright_blue',unlocked:['bright_blue'],name:'Player'}}}
+function persist(){localStorage.setItem('snakes-save',JSON.stringify(save));}
+function showToast(s){const e=document.getElementById('toast');e.textContent=s;e.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.style.display='none',2200)}
+function showScreen(id){document.querySelectorAll('.screen').forEach(e=>e.classList.remove('show'));if(id!=='game')document.getElementById(id).classList.add('show');screen=id;const playing=id==='game';document.getElementById('hud').style.display=playing?'block':'none';document.getElementById('pauseBtn').style.display=playing?'block':'none';document.getElementById('touchControls').style.display=playing?'flex':'none';document.getElementById('message').textContent=playing?'':' ';if(!playing)draw();}
+function refreshMenu(){document.getElementById('stats').textContent='High score: '+save.high+'   •   Games: '+save.games+'   •   Coins: '+save.coins;document.getElementById('skinName').textContent=(skins.find(s=>s.id===save.skin)||skins[0]).name;}
+function goMenu(){stopOnline();alive=false;showScreen('menu');refreshMenu();}
+function cycleSkin(d){let i=skins.findIndex(s=>s.id===save.skin);i=(i+d+skins.length)%skins.length;save.skin=skins[i].id;persist();refreshMenu();}
+function showShop(){document.getElementById('coins').textContent='Coins: '+save.coins;const box=document.getElementById('skinList');box.innerHTML='';skins.forEach(s=>{const owned=save.unlocked.includes(s.id),b=document.createElement('button');b.className='skin'+(save.skin===s.id?' selected':'');b.innerHTML='<div style="height:20px;border-radius:8px;background:'+s.color+'"></div><b>'+s.name+'</b><div class="small">'+(owned?'OWNED':s.cost+' coins')+'</div>';b.onclick=()=>{if(owned){save.skin=s.id;persist();showShop()}else if(save.coins>=s.cost){save.coins-=s.cost;save.unlocked.push(s.id);save.skin=s.id;persist();showShop()}else showToast('Not enough coins')};box.appendChild(b)});showScreen('shopScreen');}
+function showSettings(){document.getElementById('soundToggle').checked=localStorage.getItem('snakes-sound')!=='off';showScreen('settingsScreen')}
+function toggleTheme(){night=!night;showToast(night?'Night theme':'Day theme')}
+function showOnline(){document.getElementById('playerName').value=save.name||'Player';showScreen('onlineScreen');refreshServers()}
+async function refreshServers(){const box=document.getElementById('serverList');box.textContent='Loading servers...';try{const r=await fetch(API,{cache:'no-store'});const j=await r.json();const list=(j.servers||[]).filter(s=>s.host&&s.port);box.innerHTML='';if(!list.length){box.textContent='No active public servers. You can enter one manually.';return}list.forEach(s=>{const b=document.createElement('button');b.className='muted wide';b.style.margin='4px 0';b.textContent=(s.name||s.host)+':'+s.port+' • '+(s.players??'?')+' players';b.onclick=()=>document.getElementById('serverAddress').value='ws://'+s.host+':'+s.port;box.appendChild(b)})}catch(e){box.textContent='Could not load server list. Enter the server address manually.'}}
+function startGame(mode){stopOnline();currentMode=mode;online=false;score=0;coins=0;level=1;xp=0;combo=1;foodsEaten=0;step=0;snake=[];const sx=20,sy=15;for(let i=0;i<4;i++)snake.push({x:sx-i,y:sy});direction={x:1,y:0};next={x:1,y:0};foods=[];for(let i=0;i<8;i++)spawnFood();alive=true;paused=false;partyEvent='';partyTimer=0;acc=0;lastTick=performance.now();showScreen('game');document.getElementById('message').textContent=mode.toUpperCase()+' MODE';}
+function spawnFood(){let p,n=0;do{p={x:Math.floor(Math.random()*C),y:Math.floor(Math.random()*R),rarity:Math.random()<.02?3:Math.random()<.08?2:Math.random()<.2?1:0};n++}while(n<300&&(snake.some(s=>s.x===p.x&&s.y===p.y)||foods.some(f=>f.x===p.x&&f.y===p.y)));foods.push(p)}
+function setDirection(d){const map={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};const v=map[d];if(v&&!(v.x===-direction.x&&v.y===-direction.y))next=v}
+function move(){direction=next;const h={x:snake[0].x+direction.x,y:snake[0].y+direction.y};if(h.x<0||h.x>=C||h.y<0||h.y>=R||snake.slice(0,-1).some(s=>s.x===h.x&&s.y===h.y)){endGame(false);return}snake.unshift(h);const fi=foods.findIndex(f=>f.x===h.x&&f.y===h.y);if(fi>=0){const f=foods.splice(fi,1)[0],growth=[1,3,8,20][f.rarity],points=[10,30,80,200][f.rarity];score+=points*combo;xp+=points;coins+=f.rarity+1;foodsEaten++;if(Date.now()-lastFood<3500)combo=Math.min(10,combo+1);else combo=1;lastFood=Date.now();for(let i=1;i<growth;i++)snake.push({...snake[snake.length-1]});while(foods.length<Math.min(16,8+level))spawnFood();while(level<8&&xp>=level*100){xp-=level*100;level++;showToast('LEVEL UP! '+level)}}else snake.pop();if(currentMode==='classic'&&snake.length>=60)endGame(true);if(currentMode==='party')partyTick();}
+function partyTick(){partyTimer++;if(partyTimer%220===0){const events=['DOUBLE POINTS!','SPEED UP!','SLOW MOTION!','BONUS FOOD!'];partyEvent=events[Math.floor(Math.random()*events.length)];showToast(partyEvent);if(partyEvent==='BONUS FOOD!'){spawnFood();spawnFood()}if(partyEvent==='DOUBLE POINTS!')combo=Math.min(10,combo+1)}}
+function endGame(win){alive=false;save.coins+=coins;save.games++;save.foods+=foodsEaten;if(!win)save.deaths++;save.high=Math.max(save.high,score);persist();document.getElementById('endTitle').textContent=win?'YOU WIN!':'GAME OVER';document.getElementById('endStats').innerHTML='Score: '+score+'<br>Best: '+save.high+'<br>Level: '+level+'<br>Foods: '+foodsEaten+'<br>Coins earned: +'+coins;showScreen('endScreen')}
+function pauseGame(){if(!alive)return;paused=true;showScreen('pauseScreen')}
+function resumeGame(){paused=false;lastTick=performance.now();showScreen('game')}
+function draw(){const dpr=Math.min(devicePixelRatio||1,2),w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}ctx.setTransform(dpr*w/W,0,0,dpr*h/H,0,0);ctx.fillStyle=night?'#070b15':'#111a2b';ctx.fillRect(0,0,W,H);ctx.strokeStyle=night?'#16334a':'#ffffff12';ctx.lineWidth=1;for(let x=0;x<=W;x+=T){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=0;y<=H;y+=T){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}if(screen==='game'||alive){const colors=['#ff5f6d','#f3a83b','#a878ff','#ffe45e'];foods.forEach(f=>{ctx.fillStyle=colors[f.rarity];ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(f.x*T+T/2,f.y*T+T/2,6+f.rarity*1.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0});const skin=skins.find(s=>s.id===save.skin)||skins[0];snake.forEach((s,i)=>{ctx.fillStyle=skin.color;ctx.globalAlpha=i===0?1:Math.max(.45,1-i/snake.length*.5);ctx.beginPath();ctx.roundRect(s.x*T+1,s.y*T+1,T-2,T-2,5);ctx.fill();if(i===0){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x*T+14,s.y*T+6,2.5,0,7);ctx.arc(s.x*T+14,s.y*T+14,2.5,0,7);ctx.fill()}});ctx.globalAlpha=1}if(screen==='menu'){ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 50px Arial';ctx.fillText('SneakySnakes',400,100);ctx.font='18px Arial';ctx.fillStyle='#9fd8ff';ctx.fillText('Choose a mode to play',400,135)}}
+function updateHud(){document.getElementById('hud').innerHTML='Score: '+(online?onlineScore:score)+'<br>Length: '+(online?snake.length:snake.length)+'<br>Level: '+level+'<br>Coins: '+(online?onlineCoins:coins)+'<br>'+currentMode.toUpperCase();}
+function loop(t){if(screen==='game'&&alive&&!paused&&!online){const rate=sprint?70:115;acc+=Math.min(50,t-lastTick);lastTick=t;while(acc>=rate){move();acc-=rate}}else lastTick=t;draw();if(screen==='game')updateHud();requestAnimationFrame(loop)}
+function showEndMessage(msg){showToast(msg)}
+function stopOnline(){if(ws){try{ws.close()}catch(e){}ws=null}online=false;players={}}
+function connectOnline(){const address=document.getElementById('serverAddress').value.trim(),name=document.getElementById('playerName').value.trim().slice(0,24)||'Player';if(!/^wss?:\/\//.test(address)){showToast('Use ws:// or wss://');return}save.name=name;persist();stopOnline();ws=new WebSocket(address);showToast('Connecting...');ws.onopen=()=>{online=true;currentMode='online';alive=true;snake=[{x:32,y:32},{x:31,y:32},{x:30,y:32},{x:29,y:32}];direction={x:1,y:0};next={x:1,y:0};onlineScore=0;onlineCoins=0;ws.send(JSON.stringify({type:'join',name,skin:save.skin}));showScreen('game');showToast('Connected!')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}if(m.type==='joined'){serverId=m.id;worldTiles=m.worldTiles||64;snake=Array.from({length:4},(_,i)=>({x:32-i,y:32}))}if(m.type==='state'){players={};(m.players||[]).forEach(p=>{players[p.id]=p;if(p.id===serverId){snake=(p.body||[]).map(b=>({x:b[0],y:b[1]}));onlineScore=p.score||0}})}if(m.type==='foods')serverFoods=m.foods||[];if(m.type==='coin_spawn')serverCoins=m.coins||[];if(m.type==='player_died'&&m.id===serverId){alive=false;save.games++;save.deaths++;save.coins+=onlineCoins;persist();document.getElementById('endTitle').textContent='YOU DIED';document.getElementById('endStats').textContent='Online session ended. Score: '+onlineScore;showScreen('endScreen')} };ws.onerror=()=>showToast('Connection error');ws.onclose=()=>{if(online)showToast('Disconnected');online=false};}
+function onlineMove(){if(!ws||ws.readyState!==1||!snake.length)return;const h={x:snake[0].x+direction.x,y:snake[0].y+direction.y};if(h.x<0||h.y<0||h.x>=worldTiles||h.y>=worldTiles){ws.send(JSON.stringify({type:'die',reason:'border'}));return}snake.unshift(h);snake.pop();ws.send(JSON.stringify({type:'move',dir:[direction.x,direction.y],head:[h.x,h.y],body:snake.map(p=>[p.x,p.y])}));}
+document.querySelectorAll('[data-dir]').forEach(b=>{const d=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();setDirection(d)})});
+document.getElementById('sprint').addEventListener('pointerdown',()=>{sprint=true});['pointerup','pointercancel','pointerleave'].forEach(ev=>document.getElementById('sprint').addEventListener(ev,()=>sprint=false));
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='arrowup'||k==='w')setDirection('up');if(k==='arrowdown'||k==='s')setDirection('down');if(k==='arrowleft'||k==='a')setDirection('left');if(k==='arrowright'||k==='d')setDirection('right');if(k==='escape'){if(screen==='game')pauseGame();else if(screen!=='menu')goMenu()}});
+window.gameBack=()=>{if(screen==='game')pauseGame();else goMenu()};
+window.addEventListener('resize',draw);
+document.getElementById('soundToggle').addEventListener('change',e=>localStorage.setItem('snakes-sound',e.target.checked?'on':'off'));
+refreshMenu();requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
