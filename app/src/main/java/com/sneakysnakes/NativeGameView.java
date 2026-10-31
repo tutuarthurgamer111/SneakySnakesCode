@@ -18,7 +18,7 @@ public class NativeGameView extends View {
     boolean connected=false, alive=true, sprint=false, offline=false, doublePoints=false;
     String mode="ONLINE", partyEvent="", status="Conectando...";
     int partyMoves=0, partyEventTicks=0;
-    long last=0, startedAt=System.currentTimeMillis(), fpsAt=System.currentTimeMillis();
+    long last=0, startedAt=System.currentTimeMillis(), fpsAt=System.currentTimeMillis(), levelUpUntil=0;
     final ArrayList<int[]> snake=new ArrayList<>();
     final List<int[]> foods=new CopyOnWriteArrayList<>(), coins=new CopyOnWriteArrayList<>(), apples=new CopyOnWriteArrayList<>();
     final Map<Integer,Player> others=new ConcurrentHashMap<>();
@@ -129,7 +129,40 @@ public class NativeGameView extends View {
     void spawnLocalFood() {
         for(int i=0;i<200;i++) { int x=(int)(Math.random()*world),y=(int)(Math.random()*world); if(!occupied(x,y)){foods.add(new int[]{x,y,(int)(Math.random()*4)});return;} }
     }
-    void spawnLocalCoin(){coins.add(new int[]{(int)(Math.random()*world),(int)(Math.random()*world),0});}
+    void spawnLocalCoin(){
+        for(int i=0;i<300;i++) {
+            int x=(int)(Math.random()*world), y=(int)(Math.random()*world);
+            if(!occupied(x,y) && !containsItem(coins,x,y) && !containsItem(apples,x,y)) {
+                coins.add(new int[]{x,y,0});
+                return;
+            }
+        }
+    }
+
+    boolean containsItem(List<int[]> items,int x,int y) {
+        for(int[] item:items) if(item[0]==x&&item[1]==y) return true;
+        return false;
+    }
+
+    int xpForNextLevel() {
+        int[] thresholds={10,25,50,100,200,400,800};
+        return level<=thresholds.length?thresholds[level-1]:Integer.MAX_VALUE;
+    }
+
+    void addXp(int amount) {
+        xp+=amount;
+        if(!offline) return;
+        while(level<8 && xp>=xpForNextLevel()) {
+            xp-=xpForNextLevel();
+            level++;
+            levelUpUntil=System.currentTimeMillis()+2500;
+            NativeAudio.play("levelup");
+            int targetCoins=3+(level-1)*2;
+            while(coins.size()<targetCoins) spawnLocalCoin();
+        }
+    }
+
+    int targetOfflineCoins() { return 3+(level-1)*2; }
     void spawnLocalApple(){apples.add(new int[]{(int)(Math.random()*world),(int)(Math.random()*world),0});}
 
     void step() {
@@ -148,7 +181,7 @@ public class NativeGameView extends View {
         for(int[] a:foods) if(a[0]==x&&a[1]==y) {
             int r=Math.min(3,Math.max(0,a[2]));
             grow=new int[]{1,3,8,20}[r];
-            score+=new int[]{10,30,80,200}[r]*(doublePoints?2:1); xp+=new int[]{5,15,40,100}[r];
+            score+=new int[]{10,30,80,200}[r]*(doublePoints?2:1); addXp(new int[]{5,15,40,100}[r]);
             foods.remove(a); NativeAudio.play("eat"); break;
         }
         int[] tail=snake.get(snake.size()-1);
@@ -169,11 +202,11 @@ public class NativeGameView extends View {
                     int balance=Math.max(0,prefs.getInt("server_coins",0));
                     prefs.edit().putInt("server_coins",balance+1).apply();
                 }
-            } else spawnLocalCoin();
+            } else { while(coins.size()<targetOfflineCoins()) spawnLocalCoin(); }
             break;
         }
         for(int[] a:apples) if(a[0]==x&&a[1]==y) {
-            apples.remove(a); score+=50; applesN++; xp+=25; NativeAudio.play("eat");
+            apples.remove(a); score+=50; applesN++; addXp(25); NativeAudio.play("eat");
             if(!offline)send("{\"type\":\"apple_collect\",\"x\":"+x+",\"y\":"+y+"}");
             else spawnLocalApple();
             break;
@@ -304,7 +337,7 @@ public class NativeGameView extends View {
             c.drawText(lines[i],18*d,28*d+i*19*d,p);
         }
         p.setColor(0xb4141428); c.drawRoundRect(left,h-20*d,left+panelW,h-8*d,6*d,6*d,p);
-        float progress=Math.min(1f,(float)xp/Math.max(1,level*100));
+        float progress=xpForNextLevel()==Integer.MAX_VALUE?1f:Math.min(1f,(float)xp/Math.max(1,xpForNextLevel()));
         p.setColor(0xff50c8ff); c.drawRoundRect(left,h-20*d,left+panelW*progress,h-8*d,6*d,6*d,p);
         p.setColor(0x6464b4ff); p.setStyle(Paint.Style.STROKE);
         c.drawRoundRect(left,h-20*d,left+panelW,h-8*d,6*d,6*d,p); p.setStyle(Paint.Style.FILL);
@@ -317,6 +350,10 @@ public class NativeGameView extends View {
             p.setTextAlign(Paint.Align.LEFT); p.setTextSize(11*d);
             p.setColor(connected?0xc864ff78:0xc8ff7850);
             c.drawText(status,8*d,h-28*d,p);
+        }
+        if(levelUpUntil>System.currentTimeMillis()) {
+            p.setTextAlign(Paint.Align.CENTER); p.setTextSize(22*d); p.setTypeface(Typeface.DEFAULT_BOLD);
+            p.setColor(0xffffd45c); c.drawText("LEVEL UP!  LEVEL "+level,w/2,h*.22f,p);
         }
         if(!partyEvent.isEmpty()) {
             p.setTextAlign(Paint.Align.CENTER); p.setTextSize(14*d); p.setTypeface(Typeface.DEFAULT_BOLD);
