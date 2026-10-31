@@ -47,6 +47,45 @@ const foods   = [];
 const coins   = [];
 const apples = []; 
 const serverStartTime = Date.now();
+const economyPath = path.join(__dirname, 'data', 'economy.json');
+const SKIN_PRICES = {
+    obsidian: 150, lava: 200, ice: 200, midnight: 120, toxic: 300,
+    rich: 300, tex_snake: 350, tex_pixel: 400, tex_neon_grid: 400,
+    tex_galaxy: 500, tex_fire: 500, tex_tomato: 1000
+};
+let economy = {};
+try {
+    fs.mkdirSync(path.dirname(economyPath), { recursive: true });
+    if (fs.existsSync(economyPath)) economy = JSON.parse(fs.readFileSync(economyPath, 'utf8'));
+} catch (e) {
+    logEconomyError('Could not load economy data: ' + e.message);
+    economy = {};
+}
+function logEconomyError(message) { console.error('[Economy] ' + message); }
+function profileKey(name) { return String(name || 'Player').trim().toLowerCase().slice(0, 24) || 'player'; }
+function getProfile(name) {
+    const key = profileKey(name);
+    if (!economy[key]) economy[key] = { coins: 0, skins: [], equipped: 'bright_blue' };
+    const p = economy[key];
+    if (!Number.isSafeInteger(p.coins) || p.coins < 0) p.coins = 0;
+    if (!Array.isArray(p.skins)) p.skins = [];
+    if (!p.equipped) p.equipped = 'bright_blue';
+    return p;
+}
+function saveEconomy() {
+    try {
+        fs.mkdirSync(path.dirname(economyPath), { recursive: true });
+        const temp = economyPath + '.tmp';
+        fs.writeFileSync(temp, JSON.stringify(economy, null, 2));
+        fs.renameSync(temp, economyPath);
+    } catch (e) { logEconomyError('Could not save economy: ' + e.message); }
+}
+function sendProfile(player) {
+    const profile = getProfile(player.name);
+    player.coins = profile.coins;
+    send(player.ws, { type: 'profile', coins: profile.coins, skins: profile.skins, equipped: profile.equipped });
+}
+
 
 function getUptime() {
     const diff = Date.now() - serverStartTime;
@@ -240,12 +279,17 @@ const id = nextId++;
         switch (msg.type) {
             case 'join': {
                 player.name = String(msg.name || ('Player' + id)).substring(0, 24);
-                player.skin = String(msg.skin || 'bright_blue').substring(0, 40);
+                const profile = getProfile(player.name);
+                const requestedSkin = String(msg.skin || 'bright_blue').substring(0, 40);
+                player.skin = (requestedSkin === 'bright_blue' || requestedSkin === 'bright_green' || profile.skins.includes(requestedSkin)) ? requestedSkin : profile.equipped;
+                if (player.skin !== 'bright_blue' && player.skin !== 'bright_green' && !profile.skins.includes(player.skin)) player.skin = 'bright_blue';
+                player.coins = profile.coins;
                 player.alive = true;
                 const sx = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
                 const sy = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
                 player.body = []; for (let i = 0; i < 4; i++) player.body.push([sx - i, sy]);
-                player.dir = [1, 0]; player.score = 0; player.coins = 0;
+                player.dir = [1, 0]; player.score = 0;
+                sendProfile(player);
                 log(`\x1b[34m[[game logs]] Player ${player.name} joined the Game!\x1b[0m`);
                 broadcast({ type: 'player_joined', id, name: player.name, skin: player.skin }, id);
                 break;
@@ -279,9 +323,50 @@ const id = nextId++;
                 const ci = checkCoinEaten(cx, cy);
                 if (ci >= 0) {
                     coins.splice(ci, 1);
-                    player.coins++;
+                    const profile = getProfile(player.name);
+                    profile.coins++;
+                    player.coins = profile.coins;
+                    saveEconomy();
                     ensureCoins();
                     broadcastCoins();
+                    sendProfile(player);
+                }
+                break;
+            }
+            case 'profile': {
+                sendProfile(player);
+                break;
+            }
+            case 'shop_buy': {
+                const skinId = String(msg.skin || '');
+                const cost = SKIN_PRICES[skinId];
+                const profile = getProfile(player.name);
+                if (!cost) { send(ws, { type: 'shop_result', success: false, message: 'Skin inválida.' }); break; }
+                if (profile.skins.includes(skinId)) { send(ws, { type: 'shop_result', success: false, message: 'Você já possui essa skin.' }); break; }
+                if (profile.coins < cost) { send(ws, { type: 'shop_result', success: false, message: 'Moedas insuficientes.' }); break; }
+                profile.coins -= cost;
+                profile.skins.push(skinId);
+                profile.equipped = skinId;
+                player.coins = profile.coins;
+                player.skin = skinId;
+                saveEconomy();
+                send(ws, { type: 'shop_result', success: true, message: 'Skin comprada!' });
+                sendProfile(player);
+                broadcastAll(buildStatePayload());
+                break;
+            }
+            case 'skin_equip': {
+                const skinId = String(msg.skin || '');
+                const profile = getProfile(player.name);
+                if (skinId === 'bright_blue' || skinId === 'bright_green' || profile.skins.includes(skinId)) {
+                    profile.equipped = skinId;
+                    player.skin = skinId;
+                    saveEconomy();
+                    send(ws, { type: 'shop_result', success: true, message: 'Skin equipada!' });
+                    sendProfile(player);
+                    broadcastAll(buildStatePayload());
+                } else {
+                    send(ws, { type: 'shop_result', success: false, message: 'Você ainda não possui essa skin.' });
                 }
                 break;
             }
