@@ -78,7 +78,7 @@ public class NativeGameView extends View {
                 } else if(type.equals("foods")) items(o.optJSONArray("foods"),foods,true);
                 else if(type.equals("coin_spawn")) items(o.optJSONArray("coins"),coins,false);
                 else if(type.equals("apple_spawn")) items(o.optJSONArray("apples"),apples,false);
-                else if(type.equals("player_died")&&o.optInt("id")==id) die(false);
+                else if(type.equals("player_died")&&o.optInt("id")==id) die(true);
                 invalidate();
             } catch(Exception e) { status="Erro ao ler dados"; invalidate(); }
         });
