@@ -14,7 +14,7 @@ android {
         versionName "4.0.0"
     }
 
-    compileOptions {
+    sourceSets {\n        main { assets.srcDirs += ["../SneakySnakes/Resources/content"] }\n    }\n\n    compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
