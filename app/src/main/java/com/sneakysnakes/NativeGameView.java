@@ -75,7 +75,7 @@ public class NativeGameView extends View {
         }
     }
 
-    static String esc(String s) { return s.replace("\\","\\\\").replace("\"","\\\""); }
+    static String esc(String s) { return s.replace("\","\\\").replace("\"","\\""); }
     void sendJoin() { send("{\"type\":\"join\",\"name\":\""+esc(joinName)+"\",\"skin\":\""+esc(skinId)+"\"}"); }
     void send(String s) { if(net!=null) net.send(s); }
 
@@ -254,7 +254,7 @@ public class NativeGameView extends View {
                 coinsN+=3;
                 coinCollected=true;
                 NativeAudio.play("eat");
-                if(!offline) send("{\\"type\\":\\"coin_collect\\",\\"x\\":"+x+",\\"y\\":"+y+"}");
+                if(!offline) send("{\"type\":\"coin_collect\",\"x\":"+x+",\"y\":"+y+"}");
                 else if(getContext() instanceof Activity) {
                     Activity activity=(Activity)getContext();
                     android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
