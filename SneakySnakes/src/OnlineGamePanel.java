@@ -1078,7 +1078,7 @@ private String serverUptime = "Server Est: 0s";
         int start=json.indexOf('{',i+needle.length());if(start<0)return null;
         int depth=0;boolean quoted=false,escape=false;
         for(int p=start;p<json.length();p++){char ch=json.charAt(p);
-            if(quoted){if(escape)escape=false;else if(ch=='\\\\')escape=true;else if(ch=='\"')quoted=false;}
+            if(quoted){if(escape)escape=false;else if(ch=='\\')escape=true;else if(ch=='\"')quoted=false;}
             else if(ch=='\"')quoted=true;else if(ch=='{')depth++;else if(ch=='}'&&--depth==0)return json.substring(start,p+1);
         }return null;
     }
