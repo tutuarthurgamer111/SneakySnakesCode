@@ -20,6 +20,8 @@ public class NativeGameView extends View {
     final ArrayList<int[]> snake=new ArrayList<>();
     final List<int[]> foods=new CopyOnWriteArrayList<>(), coins=new CopyOnWriteArrayList<>(), apples=new CopyOnWriteArrayList<>();
     final Map<Integer,Player> others=new ConcurrentHashMap<>();
+    int steeringPointer=-1, sprintPointer=-1;
+    float steeringX, steeringY;
 
     static class Player { String name; boolean alive; int[][] body; }
 
@@ -259,20 +261,9 @@ public class NativeGameView extends View {
         p.setColor(color);p.setTextSize(size);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextAlign(Paint.Align.CENTER);c.drawText(s,x,y,p);
     }
     void controls(Canvas c,float w,float h) {
+        // Only the sprint button remains visible; movement is controlled by dragging anywhere.
         float d=getResources().getDisplayMetrics().density;
-        float joyX=104*d, joyY=h-112*d, joyR=86*d;
         float runX=w-100*d, runY=h-105*d, runR=68*d;
-
-        p.setColor(0x88345f82);
-        c.drawCircle(joyX,joyY,joyR,p);
-        p.setColor(0x665f9bc2);
-        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(2*d);
-        c.drawCircle(joyX,joyY,joyR-5*d,p); p.setStyle(Paint.Style.FILL);
-        label(c,"▲",joyX,joyY-43*d,34*d,-1);
-        label(c,"▼",joyX,joyY+58*d,34*d,-1);
-        label(c,"◀",joyX-53*d,joyY+10*d,34*d,-1);
-        label(c,"▶",joyX+53*d,joyY+10*d,34*d,-1);
-
         p.setColor(0xbb9b5b25);
         c.drawCircle(runX,runY,runR,p);
         p.setColor(0x88e4a35d);
@@ -280,28 +271,67 @@ public class NativeGameView extends View {
         c.drawCircle(runX,runY,runR-5*d,p); p.setStyle(Paint.Style.FILL);
         label(c,sprint?"SPRINT":"CORRER",runX,runY+6*d,17*d,-1);
     }
+
+    void updateDragDirection(float x,float y) {
+        float mx=x-steeringX, my=y-steeringY;
+        float threshold=12*getResources().getDisplayMetrics().density;
+        if(Math.hypot(mx,my)<threshold) return;
+        if(Math.abs(mx)>Math.abs(my)) {
+            if(mx<0 && dx!=1){nx=-1;ny=0;}
+            else if(mx>0 && dx!=-1){nx=1;ny=0;}
+        } else {
+            if(my<0 && dy!=1){nx=0;ny=-1;}
+            else if(my>0 && dy!=-1){nx=0;ny=1;}
+        }
+        steeringX=x; steeringY=y;
+    }
+
     @Override public boolean onTouchEvent(MotionEvent e) {
-        float x=e.getX(),y=e.getY(),w=getWidth(),h=getHeight();
-        float d=getResources().getDisplayMetrics().density;
-        float joyX=104*d, joyY=h-112*d, joyR=86*d;
-        float runX=w-100*d, runY=h-105*d, runR=68*d;
-        if(e.getAction()==MotionEvent.ACTION_DOWN||e.getAction()==MotionEvent.ACTION_MOVE) {
-            float joyDist=(float)Math.hypot(x-joyX,y-joyY);
-            float runDist=(float)Math.hypot(x-runX,y-runY);
-            if(runDist<=runR+18*d) sprint=true;
-            else if(joyDist<=joyR+22*d) {
-                float a=x-joyX,b=y-joyY;
-                if(Math.abs(a)>Math.abs(b)) {
-                    if(a< -18*d&&dx!=1){nx=-1;ny=0;}
-                    else if(a>18*d&&dx!=-1){nx=1;ny=0;}
-                } else {
-                    if(b< -18*d&&dy!=1){nx=0;ny=-1;}
-                    else if(b>18*d&&dy!=-1){nx=0;ny=1;}
+        final int action=e.getActionMasked();
+        final int index=e.getActionIndex();
+        final int pointer=e.getPointerId(index);
+        final float d=getResources().getDisplayMetrics().density;
+        final float runX=getWidth()-100*d, runY=getHeight()-105*d, runR=68*d;
+
+        if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN) {
+            float x=e.getX(index), y=e.getY(index);
+            if(Math.hypot(x-runX,y-runY)<=runR+20*d) {
+                sprintPointer=pointer; sprint=true;
+            } else if(steeringPointer==-1) {
+                steeringPointer=pointer; steeringX=x; steeringY=y;
+            }
+            invalidate();
+            return true;
+        }
+
+        if(action==MotionEvent.ACTION_MOVE) {
+            for(int i=0;i<e.getPointerCount();i++) {
+                int pid=e.getPointerId(i);
+                if(pid==steeringPointer) updateDragDirection(e.getX(i),e.getY(i));
+                if(pid==sprintPointer) {
+                    float x=e.getX(i),y=e.getY(i);
+                    sprint=Math.hypot(x-runX,y-runY)<=runR+30*d;
                 }
             }
-            invalidate();return true;
+            invalidate();
+            return true;
         }
-        if(e.getAction()==MotionEvent.ACTION_UP||e.getAction()==MotionEvent.ACTION_CANCEL){sprint=false;return true;}
+
+        if(action==MotionEvent.ACTION_POINTER_UP || action==MotionEvent.ACTION_UP) {
+            if(pointer==steeringPointer) steeringPointer=-1;
+            if(pointer==sprintPointer) { sprintPointer=-1; sprint=false; }
+            if(action==MotionEvent.ACTION_UP) {
+                steeringPointer=-1; sprintPointer=-1; sprint=false;
+            }
+            invalidate();
+            return true;
+        }
+
+        if(action==MotionEvent.ACTION_CANCEL) {
+            steeringPointer=-1; sprintPointer=-1; sprint=false;
+            invalidate();
+            return true;
+        }
         return true;
     }
     void close(){if(net!=null)net.close();NativeAudio.stopMusic();}
