@@ -75,7 +75,7 @@ public class NativeGameView extends View {
         }
     }
 
-    static String esc(String s) { return s.replace("\","\\\").replace("\"","\\""); }
+    static String esc(String s) { return s.replace("\\","\\\\").replace("\"","\\\""); }
     void sendJoin() { send("{\"type\":\"join\",\"name\":\""+esc(joinName)+"\",\"skin\":\""+esc(skinId)+"\"}"); }
     void send(String s) { if(net!=null) net.send(s); }
 
