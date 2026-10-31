@@ -244,6 +244,15 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
             String type = jsonString(msg, "type");
             if (type == null) return;
             switch (type) {
+                case "profile": {
+                    if (saveRef != null) {
+                        saveRef.coins = Math.max(0, jsonInt(msg, "coins"));
+                        String owned = jsonString(msg, "skins");
+                        if (owned != null) SkinSystem.deserializeUnlocked(owned);
+                        saveRef.save();
+                    }
+                    break;
+                }
                 case "welcome": {
                     myId = jsonInt(msg, "id");
                     int serverTiles = jsonInt(msg, "worldTiles");
@@ -300,7 +309,7 @@ case "state":
      */
     private void persistSessionStats() {
         if (saveRef == null) return;
-        saveRef.coins    += myCoins;
+        // Coins are committed individually when collected; never add the session counter again.
         saveRef.foodsEaten += myApples; // apples count as foods for statistics
         if (myScore > saveRef.highScore) saveRef.highScore = myScore;
         saveRef.deaths++;
