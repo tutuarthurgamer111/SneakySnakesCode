@@ -386,7 +386,7 @@ const id = nextId++;
                 if (!player.accountKey) player.name = String(msg.name || ('Player' + id)).substring(0, 24);
                 const requestedSkin = String(msg.skin || 'bright_blue').substring(0, 40);
                 // Skins compradas no Android ficam salvas localmente; o servidor apenas aplica a aparência enviada.
-                player.skin = (requestedSkin === 'bright_blue' || requestedSkin === 'bright_green' || Object.prototype.hasOwnProperty.call(SKIN_PRICES, requestedSkin)) ? requestedSkin : 'bright_blue';
+                player.skin = player.accountKey && accounts[player.accountKey] ? (accounts[player.accountKey].equippedSkin || 'bright_green') : ((requestedSkin === 'bright_blue' || requestedSkin === 'bright_green' || Object.prototype.hasOwnProperty.call(SKIN_PRICES, requestedSkin)) ? requestedSkin : 'bright_blue');
                 player.coins = player.accountKey && accounts[player.accountKey] ? (accounts[player.accountKey].coins || 0) : 0;
                 player.alive = true;
                 const sx = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
@@ -457,7 +457,7 @@ const id = nextId++;
                 break;
             }
             case 'identify': {
-                player.name = String(msg.name || ('Player' + id)).substring(0, 24);
+                if (!player.accountKey) player.name = String(msg.name || ('Player' + id)).substring(0, 24);
                 sendProfile(player);
                 break;
             }
