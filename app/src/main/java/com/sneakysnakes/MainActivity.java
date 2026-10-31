@@ -21,6 +21,7 @@ public class MainActivity extends Activity {
     static final String SERVER_API = "https://sneakysnakes-server-list.vercel.app/api/servers";
     LinearLayout root;
     NativeSocket shopSocket;
+    EditText accountUser, accountPass, accountNick;
     boolean shopVisible=false;
     // Shared catalog: identical IDs, score unlocks and coin prices to the PC version.
     static final String[] SKIN_IDS={"cocoa","bright_blue","lilac","hurricane","violet","bright_red","bright_green","yeller","really_blue","really_red","gold","neon_green","neon_pink","neon_blue","rainbow","obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
@@ -130,6 +131,7 @@ public class MainActivity extends Activity {
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(14)));
         addButton("JOGAR",true,()->showPlayMenu());
+        addButton("CONTA",false,()->showAccount());
         addButton("LOJA DE SKINS",false,()->showShop());
         addButton("CONFIGURAÇÕES",false,()->showSettings());
         root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(8)));
@@ -234,6 +236,90 @@ public class MainActivity extends Activity {
                 launchGame(playerName(),address,false,"ONLINE");
             });
         },"official-server-list").start();
+    }
+
+    void showAccount() {
+        base("CONTA","Use a mesma conta no PC e no Android");
+        accountUser=edit("Usuário (3 a 20 caracteres)","",false);
+        accountPass=edit("Senha (mínimo 8 caracteres)","",false);
+        accountPass.setInputType(129);
+        accountNick=edit("Apelido (somente ao registrar)","",false);
+        for(EditText field:new EditText[]{accountUser,accountPass,accountNick}) {
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48));
+            lp.topMargin=dp(7);root.addView(field,lp);
+        }
+        String saved=getPreferences(0).getString("account_nickname","");
+        if(!saved.isEmpty()) {
+            TextView current=text("Conectado como "+saved,13,0xff8fe0ad);
+            root.addView(current,new LinearLayout.LayoutParams(-1,dp(30)));
+        }
+        addButton("ENTRAR",true,()->sendAccountAuth(false));
+        addButton("CRIAR CONTA",false,()->sendAccountAuth(true));
+        addButton("SAIR DA CONTA",false,()->{
+            getPreferences(0).edit().remove("account_token").remove("account_nickname").remove("server_owned_skins").putInt("server_coins",0).apply();
+            Toast.makeText(this,"Sessão removida deste aparelho.",Toast.LENGTH_SHORT).show();showAccount();
+        });
+        addButton("VOLTAR",false,()->showHome());
+    }
+
+    void sendAccountAuth(boolean register) {
+        String url=getPreferences(0).getString("last_server_url","");
+        if(!url.startsWith("wss://")) {
+            Toast.makeText(this,"Conecte primeiro a um servidor seguro (WSS).",Toast.LENGTH_LONG).show();return;
+        }
+        String username=accountUser.getText().toString().trim();
+        String password=accountPass.getText().toString();
+        String nickname=accountNick.getText().toString().trim();
+        if(username.isEmpty()||password.isEmpty()||(register&&nickname.isEmpty())) {
+            Toast.makeText(this,"Preencha os campos necessários.",Toast.LENGTH_SHORT).show();return;
+        }
+        if(shopSocket!=null)shopSocket.close();
+        shopSocket=new NativeSocket(url,raw->{
+            try {
+                JSONObject response=new JSONObject(raw);
+                String type=response.optString("type");
+                if(type.equals("auth_logged_in")||type.equals("auth_registered")) {
+                    String token=response.optString("token","");
+                    JSONObject profile=response.optJSONObject("profile");
+                    if(token.isEmpty()||profile==null)throw new Exception("Resposta incompleta do servidor");
+                    saveAccountProfile(profile);
+                    getPreferences(0).edit().putString("account_token",token).apply();
+                    String recovery=response.optString("recoveryCode","");
+                    runOnUiThread(()->{
+                        if(!recovery.isEmpty())new AlertDialog.Builder(this).setTitle("Código de recuperação")
+                            .setMessage("Anote e guarde este código em local seguro. Ele será mostrado somente agora:\\n\\n"+recovery)
+                            .setPositiveButton("OK",null).show();
+                        else Toast.makeText(this,"Login realizado! Conta sincronizada.",Toast.LENGTH_LONG).show();
+                        if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+                        showAccount();
+                    });
+                } else if(type.equals("auth_error")) {
+                    String code=response.optString("code","AUTH_FAILED");
+                    runOnUiThread(()->Toast.makeText(this,"Não foi possível entrar: "+code,Toast.LENGTH_LONG).show());
+                    if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+                }
+            } catch(Exception ignored) {}
+        });
+        shopSocket.start();
+        try {
+            JSONObject request=new JSONObject();request.put("type",register?"auth_register":"auth_login");
+            request.put("username",username);request.put("password",password);
+            if(register)request.put("nickname",nickname);
+            shopSocket.send(request.toString());
+        } catch(Exception e) { Toast.makeText(this,"Erro ao preparar solicitação.",Toast.LENGTH_SHORT).show(); }
+    }
+
+    void saveAccountProfile(JSONObject profile) {
+        JSONArray owned=profile.optJSONArray("ownedSkins");
+        StringBuilder ids=new StringBuilder();
+        if(owned!=null)for(int i=0;i<owned.length();i++){if(ids.length()>0)ids.append('|');ids.append(owned.optString(i));}
+        getPreferences(0).edit()
+            .putInt("server_coins",profile.optInt("coins",0))
+            .putString("server_owned_skins",ids.toString())
+            .putString("server_equipped_skin",profile.optString("equippedSkin","bright_green"))
+            .putString("account_nickname",profile.optString("nickname",""))
+            .putInt("skin_high_score",profile.optInt("highScore",0))
+            .apply();
     }
 
     void showShop() {
