@@ -637,13 +637,10 @@ case "state":
 
     private void drawAspectFit(Graphics graphics, BufferedImage image) {
         Graphics2D g2 = (Graphics2D) graphics.create();
-        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
-        int drawW = (int) Math.round(WIDTH * scale);
-        int drawH = (int) Math.round(HEIGHT * scale);
-        int x = (getWidth() - drawW) / 2;
-        int y = (getHeight() - drawH) / 2;
+        int drawW = Math.max(1, getWidth());
+        int drawH = Math.max(1, getHeight());
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(image, x, y, drawW, drawH, null);
+        g2.drawImage(image, 0, 0, drawW, drawH, null);
         g2.dispose();
     }
 
@@ -1017,13 +1014,10 @@ private String serverUptime = "Server Est: 0s";
     @Override public void keyTyped(KeyEvent e) {}
 
     private int[] scaleMouseCoords(int mx, int my) {
-        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
-        if (scale <= 0) return new int[]{-1, -1};
-        int drawW = (int) Math.round(WIDTH * scale);
-        int drawH = (int) Math.round(HEIGHT * scale);
-        int offsetX = (getWidth() - drawW) / 2;
-        int offsetY = (getHeight() - drawH) / 2;
-        return new int[]{(int)((mx-offsetX)/scale), (int)((my-offsetY)/scale)};
+        double scaleX = getWidth() / (double) WIDTH;
+        double scaleY = getHeight() / (double) HEIGHT;
+        if (scaleX <= 0 || scaleY <= 0) return new int[]{-1, -1};
+        return new int[]{(int)(mx/scaleX), (int)(my/scaleY)};
     }
 
     @Override public void mousePressed(MouseEvent e)  { if(e.getButton()==MouseEvent.BUTTON1) sprinting=true; }
