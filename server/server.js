@@ -466,35 +466,41 @@ const id = nextId++;
                 break;
             }
             case 'shop_buy': {
-                const skinId = String(msg.skin || '');
+                const skinId = String(msg.skinId || msg.skin || '');
                 const cost = SKIN_PRICES[skinId];
-                const profile = getProfile(player.name);
-                if (!cost) { send(ws, { type: 'shop_result', success: false, message: 'Skin inválida.' }); break; }
-                if (profile.skins.includes(skinId)) { send(ws, { type: 'shop_result', success: false, message: 'Você já possui essa skin.' }); break; }
-                if (profile.coins < cost) { send(ws, { type: 'shop_result', success: false, message: 'Moedas insuficientes.' }); break; }
+                const authenticated = !!(player.accountKey && accounts[player.accountKey]);
+                const profile = authenticated ? accounts[player.accountKey] : getProfile(player.name);
+                const owned = authenticated ? profile.ownedSkins : profile.skins;
+                if (!cost) { send(ws, { type: 'shop_result', accepted: false, code: 'INVALID_SKIN' }); break; }
+                if (owned.includes(skinId)) { send(ws, { type: 'shop_result', accepted: false, code: 'ALREADY_OWNED' }); break; }
+                if ((profile.coins || 0) < cost) { send(ws, { type: 'shop_result', accepted: false, code: 'INSUFFICIENT_COINS' }); break; }
                 profile.coins -= cost;
-                profile.skins.push(skinId);
-                profile.equipped = skinId;
+                owned.push(skinId);
+                if (authenticated) profile.equippedSkin = skinId; else profile.equipped = skinId;
                 player.coins = profile.coins;
                 player.skin = skinId;
-                saveEconomy();
-                send(ws, { type: 'shop_result', success: true, message: 'Skin comprada!' });
+                if (authenticated) saveAccounts(); else saveEconomy();
+                const resultProfile = authenticated ? publicProfile(profile) : { nickname: player.name, coins: profile.coins, ownedSkins: profile.skins, equippedSkin: profile.equipped, highScore: 0 };
+                send(ws, { type: 'shop_result', accepted: true, success: true, profile: resultProfile });
                 sendProfile(player);
                 broadcastAll(buildStatePayload());
                 break;
             }
             case 'skin_equip': {
-                const skinId = String(msg.skin || '');
-                const profile = getProfile(player.name);
-                if (skinId === 'bright_blue' || skinId === 'bright_green' || profile.skins.includes(skinId)) {
-                    profile.equipped = skinId;
+                const skinId = String(msg.skinId || msg.skin || '');
+                const authenticated = !!(player.accountKey && accounts[player.accountKey]);
+                const profile = authenticated ? accounts[player.accountKey] : getProfile(player.name);
+                const owned = authenticated ? profile.ownedSkins : profile.skins;
+                if (skinId === 'bright_blue' || skinId === 'bright_green' || owned.includes(skinId)) {
+                    if (authenticated) profile.equippedSkin = skinId; else profile.equipped = skinId;
                     player.skin = skinId;
-                    saveEconomy();
-                    send(ws, { type: 'shop_result', success: true, message: 'Skin equipada!' });
+                    if (authenticated) saveAccounts(); else saveEconomy();
+                    const resultProfile = authenticated ? publicProfile(profile) : { nickname: player.name, coins: profile.coins, ownedSkins: profile.skins, equippedSkin: profile.equipped, highScore: 0 };
+                    send(ws, { type: 'shop_result', accepted: true, success: true, profile: resultProfile });
                     sendProfile(player);
                     broadcastAll(buildStatePayload());
                 } else {
-                    send(ws, { type: 'shop_result', success: false, message: 'Você ainda não possui essa skin.' });
+                    send(ws, { type: 'shop_result', accepted: false, code: 'SKIN_NOT_OWNED' });
                 }
                 break;
             }
