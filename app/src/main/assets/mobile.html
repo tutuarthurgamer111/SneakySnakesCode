@@ -83,7 +83,7 @@ try{save=Object.assign(save,JSON.parse(localStorage.getItem(saveKey)||'{}'))}cat
 function persist(){localStorage.setItem(saveKey,JSON.stringify(save))}
 function toast(s){$('notice').textContent=s;$('notice').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('notice').style.display='none',2200)}
 function show(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id).classList.add('active');view=id;$('status').textContent=id==='gameView'?'EM PARTIDA':'MOBILE EDITION'}
-function music(file){if(!musicOn)return;const a=$('bgMusic')||new Audio();if(lastTrack!==file){lastTrack=file;a.src='audio/'+file;a.loop=true;a.volume=.48;window.bgMusic=a}a.play().catch(()=>{lastTrack=''})}
+function music(file){if(!musicOn)return;if(window.bgMusic&&lastTrack!==file){window.bgMusic.pause();window.bgMusic.currentTime=0}if(!window.bgMusic||lastTrack!==file){lastTrack=file;window.bgMusic=new Audio('audio/'+file);window.bgMusic.loop=true;window.bgMusic.volume=.48}window.bgMusic.play().catch(()=>{lastTrack=''})}
 function stopMusic(){if(window.bgMusic){window.bgMusic.pause();window.bgMusic.currentTime=0}lastTrack=''}
 function sound(file){if(!sfxOn)return;const a=new Audio('audio/'+file);a.volume=.45;a.play().catch(()=>{})}
 function menu(){disconnect();alive=false;show('menuView');$('record').textContent='Recorde: '+save.high;music('background.mp3')}
