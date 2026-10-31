@@ -274,7 +274,14 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         int newHX = gs.bodyX[0] + gs.dirX;
         int newHY = gs.bodyY[0] + gs.dirY;
 
-        if (newHX < 0 || newHX >= COLS || newHY < 0 || newHY >= ROWS) { triggerGameOver(); return; }
+        if (currentGameMode == GameMode.INFINITE) {
+            if (newHX < 0) newHX = COLS - 1;
+            else if (newHX >= COLS) newHX = 0;
+            if (newHY < 0) newHY = ROWS - 1;
+            else if (newHY >= ROWS) newHY = 0;
+        } else if (newHX < 0 || newHX >= COLS || newHY < 0 || newHY >= ROWS) {
+            triggerGameOver(); return;
+        }
 
         int checkLen = (gs.pendingGrowth > 0) ? gs.length : gs.length - 1;
         for (int i = 0; i < checkLen; i++) {
