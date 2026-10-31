@@ -12,6 +12,8 @@ public final class AppPaths {
             : new File(roaming);
         File dir = new File(base, "SneakySnakes");
         if (!dir.exists()) dir.mkdirs();
+        try { java.nio.file.Files.setAttribute(dir.toPath(), "dos:hidden", true); }
+        catch (Exception ignored) { }
         return dir;
     }
 
