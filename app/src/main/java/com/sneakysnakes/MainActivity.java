@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
 
         setContentView(game);
-        game.loadUrl("file:///android_asset/mobile.html");
+        game.loadUrl("file:///android_asset/pc.html");
     }
 
     private void hideSystemUi() {
