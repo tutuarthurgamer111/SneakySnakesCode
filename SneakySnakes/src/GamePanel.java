@@ -455,13 +455,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
     private void drawAspectFit(Graphics graphics, BufferedImage image) {
         Graphics2D g2 = (Graphics2D) graphics.create();
-        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
-        int drawW = (int) Math.round(WIDTH * scale);
-        int drawH = (int) Math.round(HEIGHT * scale);
-        int x = (getWidth() - drawW) / 2;
-        int y = (getHeight() - drawH) / 2;
+        int drawW = Math.max(1, getWidth());
+        int drawH = Math.max(1, getHeight());
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(image, x, y, drawW, drawH, null);
+        g2.drawImage(image, 0, 0, drawW, drawH, null);
         g2.dispose();
     }
 
@@ -1121,16 +1118,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // ==========================================================
 
     private int[] scaleMouseCoords(int mx, int my) {
-        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
-        if (scale <= 0) return new int[]{-1, -1};
-        int drawW = (int) Math.round(WIDTH * scale);
-        int drawH = (int) Math.round(HEIGHT * scale);
-        int offsetX = (getWidth() - drawW) / 2;
-        int offsetY = (getHeight() - drawH) / 2;
-        return new int[]{
-            (int) ((mx - offsetX) / scale),
-            (int) ((my - offsetY) / scale)
-        };
+        double scaleX = getWidth() / (double) WIDTH;
+        double scaleY = getHeight() / (double) HEIGHT;
+        if (scaleX <= 0 || scaleY <= 0) return new int[]{-1, -1};
+        return new int[]{(int)(mx / scaleX), (int)(my / scaleY)};
     }
 
     // ==========================================================
@@ -1531,9 +1522,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 randomBtn.setFocusPainted(false);
                 randomBtn.setBorderPainted(false);
                 randomBtn.setOpaque(true);
-                randomBtn.setPreferredSize(new Dimension(300, 48));
-                randomBtn.setMinimumSize(new Dimension(300, 48));
-                randomBtn.setMaximumSize(new Dimension(300, 48));
+                randomBtn.setPreferredSize(new Dimension(300, 44));
+                randomBtn.setMinimumSize(new Dimension(300, 44));
+                randomBtn.setMaximumSize(new Dimension(300, 44));
                 randomBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
                 randomBtn.setCursor(
                     Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
@@ -1573,7 +1564,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             center.add(orLabel);
             center.add(Box.createVerticalStrut(8));
 
-            JTextField searchBar = new JTextField("ws://");
+            JTextField searchBar = new JTextField("wss://");
             searchBar.setFont(new Font("Arial", Font.PLAIN, 14));
             searchBar.setForeground(new Color(160, 190, 220));
             searchBar.setBackground(new Color(30, 36, 54));
@@ -1584,13 +1575,14 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 ),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
             ));
-            searchBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+            searchBar.setPreferredSize(new Dimension(300, 38));
+            searchBar.setMaximumSize(new Dimension(300, 38));
             searchBar.setAlignmentX(Component.CENTER_ALIGNMENT);
             searchBar.addFocusListener(new java.awt.event.FocusAdapter() {
                 @Override
                 public void focusGained(java.awt.event.FocusEvent e) {
-                    if (searchBar.getText().equals("ws://")) {
-                        searchBar.setText("ws://");
+                    if (searchBar.getText().equals("wss://")) {
+                        searchBar.setText("wss://");
                     }
                     searchBar.setForeground(Color.WHITE);
                 }
@@ -1605,7 +1597,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             connectBtn.setFocusPainted(false);
             connectBtn.setBorderPainted(false);
             connectBtn.setOpaque(true);
-            connectBtn.setMaximumSize(new Dimension(160, 38));
+            connectBtn.setPreferredSize(new Dimension(300, 40));
+            connectBtn.setMinimumSize(new Dimension(300, 40));
+            connectBtn.setMaximumSize(new Dimension(300, 40));
             connectBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
             connectBtn.setCursor(
                 Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
@@ -1633,7 +1627,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             cancelBtn.setFocusPainted(false);
             cancelBtn.setBorderPainted(false);
             cancelBtn.setOpaque(true);
-            cancelBtn.setMaximumSize(new Dimension(100, 30));
+            cancelBtn.setPreferredSize(new Dimension(300, 34));
+            cancelBtn.setMinimumSize(new Dimension(300, 34));
+            cancelBtn.setMaximumSize(new Dimension(300, 34));
             cancelBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
             cancelBtn.addActionListener(ev -> dispose());
             center.add(cancelBtn);
@@ -1720,7 +1716,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                         continue;
                     }
 
-                    String address = "ws://" + host + ":" + port;
+                    String address = "\"secure\\\"\\s*:\\s*true".matches("") ? "" : "ws://" + host + ":" + port;
                     if (!addresses.contains(address)) {
                         addresses.add(address);
                     }
