@@ -22,15 +22,16 @@ public class MainActivity extends Activity {
     LinearLayout root;
     NativeSocket shopSocket;
     boolean shopVisible=false;
-    static final String[] SKIN_IDS={"cocoa","bright_blue","lilac","hurricane","violet","bright_red","bright_green","yeller","really_blue","really_red","gold","neon_green","neon_pink","neon_blue","rainbow"};
-    static final String[] SKIN_NAMES={"Cocoa","Blue","Lilac","Grey","Violet","Red","Green","Yellow","Bright Blue","Bright Red","Gold","Classic","Neon Pink","Neon Blue","Rainbow"};
-    static final int[] SKIN_COSTS={50,100,150,200,250,300,0,350,400,450,450,450,500,500,700};
-    static final int[] SKIN_COLORS={0xff562424,0xff0d69ac,0xffa75e9b,0xff635f62,0xff6b327c,0xffc4281c,0xff4b974b,0xffffdc00,0xff002060,0xffff0000,0xffc89600,0xff00ea00,0xffff0096,0xff0096ff,0xffff5050};
-    static final int[] SKIN_UNLOCK_SCORES={50,100,150,200,250,300,0,350,400,450,450,450,500,500,700};
+    // Shared catalog: identical IDs, score unlocks and coin prices to the PC version.
+    static final String[] SKIN_IDS={"cocoa","bright_blue","lilac","hurricane","violet","bright_red","bright_green","yeller","really_blue","really_red","gold","neon_green","neon_pink","neon_blue","rainbow","obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
+    static final String[] SKIN_NAMES={"Cocoa","Blue","Lilac","Grey","Violet","Red","Green","Yellow","Bright Blue","Bright Red","Gold","Classic","Neon Pink","Neon Blue","Rainbow","Obsidian","Lava","Ice Crystal","Midnight","Toxic","Rich","Snake Scale","Pixel Camo","Neon Grid","Galaxy","Fire","Tomatoes"};
+    static final int[] SKIN_COSTS={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,150,200,200,120,300,300,350,400,400,500,500,1000};
+    static final int[] SKIN_COLORS={0xff562424,0xff0d69ac,0xffa75e9b,0xff635f62,0xff6b327c,0xffc4281c,0xff4b974b,0xffffdc00,0xff002060,0xffff0000,0xffc89600,0xff00ea00,0xffff0096,0xff0096ff,0xffff5050,0xff141423,0xffc83c00,0xffb4e6ff,0xff0a0a3c,0xff32c832,0xffffed59,0xff508c3c,0xff647850,0xff00c8c8,0xff1e0050,0xffc85000,0xffed4620};
+    static final int[] SKIN_UNLOCK_SCORES={50,100,150,200,250,300,0,350,400,450,450,450,500,500,700,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     String equippedSkin(){return getPreferences(0).getString("server_equipped_skin","bright_blue");}
     int wallet(){return getPreferences(0).getInt("server_coins",0);}
     boolean owns(String id){
-        if(id.equals("bright_green")||id.equals("bright_blue"))return true;
+        if(id.equals("bright_green"))return true;
         if(id.equals("cocoa")||id.equals("bright_blue")||id.equals("lilac")||id.equals("hurricane")||id.equals("violet")||id.equals("bright_red")||id.equals("yeller")||id.equals("really_blue")||id.equals("really_red")||id.equals("gold")||id.equals("neon_green")||id.equals("neon_pink")||id.equals("neon_blue")||id.equals("rainbow")) {
             return getPreferences(0).getInt("skin_high_score",0)>=SKIN_UNLOCK_SCORES[indexOfSkin(id)];
         }
@@ -263,7 +264,7 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams prevLp=new LinearLayout.LayoutParams(dp(38),dp(38));prevLp.rightMargin=dp(10);row.addView(preview,prevLp);
             LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);
             TextView nm=text(SKIN_NAMES[i],14,Color.WHITE);nm.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
-            TextView price=text(owns(id)?"Desbloqueada":("Pontuação: "+SKIN_UNLOCK_SCORES[i]),11,0xffffd45c);price.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
+            TextView price=text(owns(id)?"Desbloqueada":(SKIN_COSTS[i]>0?(SKIN_COSTS[i]+" moedas"):( "Pontuação: "+SKIN_UNLOCK_SCORES[i])),11,0xffffd45c);price.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
             info.addView(nm);info.addView(price);row.addView(info,new LinearLayout.LayoutParams(0,-1,1));
             boolean owned=owns(id);
             Button action=button(owned?(equippedSkin().equals(id)?"EQUIPADA":"EQUIPAR"):"COMPRAR",owned);
@@ -274,7 +275,7 @@ public class MainActivity extends Activity {
                     getPreferences(0).edit().putString("server_equipped_skin",id).apply();
                     Toast.makeText(this,SKIN_NAMES[indexOfSkin(id)]+" equipada!",Toast.LENGTH_SHORT).show();
                 }else{
-                    Toast.makeText(this,"Consiga a pontuação necessária em uma partida para desbloquear!",Toast.LENGTH_SHORT).show(); return;
+                    Toast.makeText(this,SKIN_COSTS[indexOfSkin(id)]>0?"A compra online estará disponível após conectar sua conta.":"Consiga a pontuação necessária em uma partida para desbloquear!",Toast.LENGTH_SHORT).show(); return;
                 }
                 renderShop();
             });
