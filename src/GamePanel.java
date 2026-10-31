@@ -28,6 +28,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
     // -- State machine
     private enum Screen { MENU, PLAYING, PAUSED, GAME_OVER, VICTORY, SHOP, ONLINE, MODE_OPTIONS, SETTINGS, EDIT_PROFILE }
+    private enum GameMode { CLASSIC, PARTY, INFINITE }
+    private GameMode currentGameMode = GameMode.CLASSIC;
+    private int partyMoveCounter = 0;
+    private int partyEventTicks = 0;
+    private String partyEvent = "";
     private Screen screen = Screen.MENU;
 
     // -- Sub-systems
@@ -238,8 +243,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         long now = System.currentTimeMillis();
         if (gs.comboLevel > 1 && (now - gs.lastFoodTime) > GameState.COMBO_WINDOW_MS)
             gs.comboLevel = 1;
+        int effectiveRate = snakeTickRate;
+        if (currentGameMode == GameMode.PARTY) {
+            if ("SPEED UP!".equals(partyEvent)) effectiveRate = Math.max(2, snakeTickRate - 3);
+            if ("SLOW MOTION!".equals(partyEvent)) effectiveRate = snakeTickRate + 3;
+        }
         snakeTickAccum++;
-        if (snakeTickAccum >= snakeTickRate) { snakeTickAccum = 0; moveSnake(); }
+        if (snakeTickAccum >= effectiveRate) { snakeTickAccum = 0; moveSnake(); }
         AchievementSystem.checkConditions(gs);
     }
 
@@ -298,7 +308,28 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
         while (foods.size() < targetFoodCount()) spawnOneFood();
 
-        if (gs.length >= WIN_LENGTH) triggerVictory();
+        if (currentGameMode != GameMode.INFINITE && gs.length >= WIN_LENGTH) triggerVictory();
+        updatePartyMode();
+    }
+
+    private void updatePartyMode() {
+        if (currentGameMode != GameMode.PARTY) return;
+        partyMoveCounter++;
+        if (partyEventTicks > 0) {
+            partyEventTicks--;
+            if (partyEventTicks == 0) partyEvent = "";
+        }
+        if (partyMoveCounter >= 220) {
+            partyMoveCounter = 0;
+            String[] events = {"DOUBLE POINTS!", "SPEED UP!", "SLOW MOTION!", "BONUS FOOD!"};
+            partyEvent = events[rng.nextInt(events.length)];
+            partyEventTicks = 120;
+            if ("BONUS FOOD!".equals(partyEvent)) {
+                spawnOneFood();
+                spawnOneFood();
+            }
+            SoundSystem.play("levelup");
+        }
     }
 
     private void eatFood(GameState.FoodRarity rarity, int fx, int fy) {
@@ -320,7 +351,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             particles.spawnCombo(fx * TILE + TILE/2f, fy * TILE + TILE/2f, gs.comboLevel);
         }
 
-        gs.score        += gs.scoreGain(rarity);
+        int gainedScore = gs.scoreGain(rarity);
+        if (currentGameMode == GameMode.PARTY && "DOUBLE POINTS!".equals(partyEvent)) gainedScore *= 2;
+        gs.score        += gainedScore;
         gs.xp           += gs.xpGain(rarity);
         gs.pendingGrowth += rarity.growthBonus;
 
@@ -410,7 +443,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         commitSave();
     }
 
-    private void startNewGame() {
+    private void startNewGame() { startNewGame(GameMode.CLASSIC); }
+
+    private void startNewGame(GameMode mode) {
+        currentGameMode = mode;
+        partyMoveCounter = 0;
+        partyEventTicks = 0;
+        partyEvent = "";
         gs.length = 4;
         for (int i = 0; i < gs.length; i++) { gs.bodyX[i] = COLS/2 - i; gs.bodyY[i] = ROWS/2; }
         gs.dirX=1; gs.dirY=0; gs.nextDirX=1; gs.nextDirY=0;
@@ -812,6 +851,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         drawHUD(g);
         if (levelUpTimer > 0)    drawLevelUpBanner(g);
         if (comboDisplayTimer>0 && lastDisplayedCombo>1) drawComboBanner(g);
+        if (currentGameMode == GameMode.PARTY && !partyEvent.isEmpty()) {
+            g.setFont(new Font("Arial", Font.BOLD, 18));
+            g.setColor(new Color(255, 220, 100));
+            String label = "PARTY EVENT: " + partyEvent;
+            g.drawString(label, (WIDTH - g.getFontMetrics().stringWidth(label)) / 2, HEIGHT - 42);
+        }
     }
 
     private void drawAllFoods(Graphics2D g) {
@@ -886,6 +931,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             "Foods:   " + gs.foodsEaten,
             "Skin:    " + SkinSystem.current().displayName,
             "FPS:     " + fps,
+            "Mode:    " + currentGameMode.name(),
         };
         for (int i=0; i<lines.length; i++) {
             g.setColor(i<2 ? Color.WHITE : new Color(180,220,255));
@@ -1225,12 +1271,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 // Party Mode button (display-only)
                 if (inRect(mx,my, moBtnX(), moPopupY()+68, 240, 48)) {
                     SoundSystem.playClick();
-                    // TODO: implement Party Mode
+                    startNewGame(GameMode.PARTY);
                 }
                 // Infinite Mode button (display-only)
                 if (inRect(mx,my, moBtnX(), moPopupY()+130, 240, 48)) {
                     SoundSystem.playClick();
-                    // TODO: implement Infinite Mode
+                    startNewGame(GameMode.INFINITE);
                 }
                 // Click outside popup = close
                 if (!inRect(mx,my, moPopupX(), moPopupY(), 320, 220)) {
