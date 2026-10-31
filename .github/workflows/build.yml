@@ -1,0 +1,61 @@
+name: Build SneakySnakes for Windows and Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, android-port]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build APK
+        run: gradle --no-daemon assembleDebug
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SneakySnakes-Android-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile desktop game
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/classes | Out-Null
+          $files = Get-ChildItem src -Filter *.java -File | ForEach-Object { $_.FullName }
+          javac -encoding UTF-8 -d build/classes $files
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -Recurse SneakySnakes/Resources build/classes/SneakySnakes/
+          jar --create --file build/SneakySnakes.jar --main-class SneakySnakes -C build/classes .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package EXE installer
+        shell: pwsh
+        run: |
+          jpackage --type exe --name SneakySnakes --app-version 3.0.0 --input build --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/installer --win-menu --win-shortcut --vendor "SneakySnakes"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: SneakySnakes-Windows-EXE
+          path: build/installer/*.exe
