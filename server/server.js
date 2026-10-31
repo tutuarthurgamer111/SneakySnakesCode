@@ -126,9 +126,15 @@ function saveEconomy() {
     } catch (e) { logEconomyError('Could not save economy: ' + e.message); }
 }
 function sendProfile(player) {
-    const profile = getProfile(player.name);
-    player.coins = profile.coins;
-    send(player.ws, { type: 'profile', coins: profile.coins, skins: profile.skins, equipped: profile.equipped });
+    if (player.accountKey && accounts[player.accountKey]) {
+        const a = accounts[player.accountKey];
+        player.coins = a.coins || 0;
+        send(player.ws, { type: 'profile', profile: publicProfile(a) });
+        return;
+    }
+    const p = getProfile(player.name);
+    player.coins = p.coins;
+    send(player.ws, { type: 'profile', profile: { nickname: player.name, coins: p.coins, ownedSkins: p.skins, equippedSkin: p.equipped, highScore: 0 } });
 }
 
 
@@ -377,11 +383,11 @@ const id = nextId++;
                 break;
             }
             case 'join': {
-                player.name = String(msg.name || ('Player' + id)).substring(0, 24);
+                if (!player.accountKey) player.name = String(msg.name || ('Player' + id)).substring(0, 24);
                 const requestedSkin = String(msg.skin || 'bright_blue').substring(0, 40);
                 // Skins compradas no Android ficam salvas localmente; o servidor apenas aplica a aparência enviada.
                 player.skin = (requestedSkin === 'bright_blue' || requestedSkin === 'bright_green' || Object.prototype.hasOwnProperty.call(SKIN_PRICES, requestedSkin)) ? requestedSkin : 'bright_blue';
-                player.coins = 0;
+                player.coins = player.accountKey && accounts[player.accountKey] ? (accounts[player.accountKey].coins || 0) : 0;
                 player.alive = true;
                 const sx = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
                 const sy = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
@@ -434,10 +440,16 @@ const id = nextId++;
                 const ci = checkCoinEaten(cx, cy);
                 if (ci >= 0) {
                     coins.splice(ci, 1);
-                    const profile = getProfile(player.name);
-                    profile.coins += 3;
-                    player.coins = profile.coins;
-                    saveEconomy();
+                    if (player.accountKey && accounts[player.accountKey]) {
+                        accounts[player.accountKey].coins = (accounts[player.accountKey].coins || 0) + 3;
+                        player.coins = accounts[player.accountKey].coins;
+                        saveAccounts();
+                    } else {
+                        const profile = getProfile(player.name);
+                        profile.coins += 3;
+                        player.coins = profile.coins;
+                        saveEconomy();
+                    }
                     ensureCoins();
                     broadcastCoins();
                     sendProfile(player);
