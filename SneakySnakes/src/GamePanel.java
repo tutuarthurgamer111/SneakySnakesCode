@@ -1121,9 +1121,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // ==========================================================
 
     private int[] scaleMouseCoords(int mx, int my) {
-        float scaleX = (float) WIDTH  / getWidth();
-        float scaleY = (float) HEIGHT / getHeight();
-        return new int[]{ (int)(mx * scaleX), (int)(my * scaleY) };
+        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
+        if (scale <= 0) return new int[]{-1, -1};
+        int drawW = (int) Math.round(WIDTH * scale);
+        int drawH = (int) Math.round(HEIGHT * scale);
+        int offsetX = (getWidth() - drawW) / 2;
+        int offsetY = (getHeight() - drawH) / 2;
+        return new int[]{
+            (int) ((mx - offsetX) / scale),
+            (int) ((my - offsetY) / scale)
+        };
     }
 
     // ==========================================================
