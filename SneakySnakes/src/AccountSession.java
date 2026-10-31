@@ -13,6 +13,10 @@ public final class AccountSession {
     private AccountSession() {}
 
     public static String token() { return token == null ? "" : token; }
+    public static void clearToken() {
+        token="";
+        try { Files.deleteIfExists(TOKEN_FILE); } catch(Exception ignored) {}
+    }
 
     private static String loadToken() {
         try { return Files.exists(TOKEN_FILE) ? Files.readString(TOKEN_FILE, StandardCharsets.UTF_8).trim() : ""; }
