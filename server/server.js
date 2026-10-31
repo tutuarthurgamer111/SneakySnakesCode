@@ -324,7 +324,7 @@ const id = nextId++;
                 if (ci >= 0) {
                     coins.splice(ci, 1);
                     const profile = getProfile(player.name);
-                    profile.coins++;
+                    profile.coins += 3;
                     player.coins = profile.coins;
                     saveEconomy();
                     ensureCoins();
