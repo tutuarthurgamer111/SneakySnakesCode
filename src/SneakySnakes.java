@@ -3,52 +3,49 @@ import java.awt.*;
 import java.awt.event.*;
 
 public class SneakySnakes {
+    private static boolean fullscreen = false;
+    private static Rectangle windowedBounds;
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("SneakySnakes");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-            frame.setResizable(true);
+            frame.setMinimumSize(new Dimension(480, 360));
+            frame.setSize(960, 720);
+            frame.setLocationRelativeTo(null);
 
             GamePanel gamePanel = new GamePanel();
             frame.add(gamePanel);
-            frame.pack();
 
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            frame.setLocation(
-                (screenSize.width  - frame.getWidth())  / 2,
-                (screenSize.height - frame.getHeight()) / 2
-            );
+            GraphicsDevice device = GraphicsEnvironment
+                .getLocalGraphicsEnvironment().getDefaultScreenDevice();
+
+            frame.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_F11, 0), "toggleFullscreen");
+            frame.getRootPane().getActionMap().put("toggleFullscreen", new AbstractAction() {
+                @Override public void actionPerformed(ActionEvent e) {
+                    if (!fullscreen) {
+                        windowedBounds = frame.getBounds();
+                        frame.dispose();
+                        frame.setUndecorated(true);
+                        frame.setVisible(true);
+                        device.setFullScreenWindow(frame);
+                        fullscreen = true;
+                    } else {
+                        device.setFullScreenWindow(null);
+                        frame.dispose();
+                        frame.setUndecorated(false);
+                        frame.setVisible(true);
+                        if (windowedBounds != null) frame.setBounds(windowedBounds);
+                        else frame.setSize(960, 720);
+                        fullscreen = false;
+                    }
+                    gamePanel.requestFocusInWindow();
+                }
+            });
 
             frame.setVisible(true);
             gamePanel.requestFocusInWindow();
-
-            GraphicsDevice gd = GraphicsEnvironment
-                .getLocalGraphicsEnvironment()
-                .getDefaultScreenDevice();
-
-            frame.addKeyListener(new KeyAdapter() {
-                boolean isFullscreen = false;
-                @Override
-                public void keyPressed(KeyEvent e) {
-                    if (e.getKeyCode() == KeyEvent.VK_F11) {
-                        isFullscreen = !isFullscreen;
-                        frame.dispose();
-                        frame.setUndecorated(isFullscreen);
-                        if (isFullscreen) {
-                            gd.setFullScreenWindow(frame);
-                        } else {
-                            gd.setFullScreenWindow(null);
-                            frame.pack();
-                            frame.setLocation(
-                                (screenSize.width  - frame.getWidth())  / 2,
-                                (screenSize.height - frame.getHeight()) / 2
-                            );
-                            frame.setVisible(true);
-                        }
-                        gamePanel.requestFocusInWindow();
-                    }
-                }
-            });
         });
     }
 }
