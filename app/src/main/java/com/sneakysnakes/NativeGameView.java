@@ -222,7 +222,11 @@ public class NativeGameView extends View {
 
     @Override protected void onDraw(Canvas c) {
         super.onDraw(c); float w=getWidth(),h=getHeight(); c.drawColor(0xff080e18);
-        if(snake.isEmpty()){label(c,status,w/2,h/2,23,0xff75d9ff);return;}
+        if(snake.isEmpty()) {
+            label(c,status,w/2,h/2-42*density(),23,0xff75d9ff);
+            if(!alive)drawRespawnButton(c,w,h);
+            return;
+        }
         float z=Math.min(22,Math.max(12,Math.min(w/18,h/14))),cx=w/2,cy=h/2;
         int hx=snake.get(0)[0],hy=snake.get(0)[1];
         float ox=cx-(hx+.5f)*z,oy=cy-(hy+.5f)*z;
