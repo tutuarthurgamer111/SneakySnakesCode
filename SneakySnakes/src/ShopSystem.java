@@ -238,14 +238,22 @@ public class ShopSystem {
 
             if (mx >= cx && mx <= cx + CARD_W && my >= cy && my <= cy + CARD_H) {
                 if (skin.unlocked) {
-                    // Equip
-                    SkinSystem.setById(skin.id);
+                    // Account owners equip through the authoritative server.
+                    if (!AccountSession.token().isEmpty()) {
+                        if (!AccountSession.syncShopAction("shop_equip", skin.id, save)) return false;
+                    } else {
+                        SkinSystem.setById(skin.id);
+                    }
                     SoundSystem.playClick();
                     return false;
                 } else if (skin.coinCost > 0 && save.coins >= skin.coinCost) {
-                    // Buy
-                    SkinSystem.buySkin(skin.id, save);
-                    SkinSystem.setById(skin.id);
+                    // Account purchases are charged and saved by the server.
+                    if (!AccountSession.token().isEmpty()) {
+                        if (!AccountSession.syncShopAction("shop_buy", skin.id, save)) return false;
+                    } else {
+                        SkinSystem.buySkin(skin.id, save);
+                        SkinSystem.setById(skin.id);
+                    }
                     SoundSystem.playClick();
                     return true;
                 }
