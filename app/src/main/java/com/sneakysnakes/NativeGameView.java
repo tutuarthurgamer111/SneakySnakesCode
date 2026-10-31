@@ -23,6 +23,7 @@ public class NativeGameView extends View {
     final List<int[]> foods=new CopyOnWriteArrayList<>(), coins=new CopyOnWriteArrayList<>(), apples=new CopyOnWriteArrayList<>();
     final Map<Integer,Player> others=new ConcurrentHashMap<>();
     int steeringPointer=-1, sprintPointer=-1;
+    boolean respawnPressed=false;
     float steeringX, steeringY;
     Bitmap appleBitmap, coinBitmap, snakeTexture;
     String skinId="bright_blue";
@@ -239,7 +240,39 @@ public class NativeGameView extends View {
         if(showSnakeFace && !snake.isEmpty()) drawSnakeFace(c,ox,oy,z,snake.get(0)[0],snake.get(0)[1]);
         drawHud(c,w,h);
         controls(c,w,h);
-        if(!alive){p.setColor(0xaa000000);c.drawRect(0,0,w,h,p);label(c,status,w/2,h/2,30,status.contains("VITÓRIA")?0xffffd45c:-1);}
+        if(!alive){
+            p.setColor(0xaa000000);c.drawRect(0,0,w,h,p);
+            label(c,status,w/2,h/2-42*density(),30,status.contains("VITÓRIA")?0xffffd45c:-1);
+            drawRespawnButton(c,w,h);
+        }
+    }
+
+    float density(){return getResources().getDisplayMetrics().density;}
+
+    void drawRespawnButton(Canvas c,float w,float h) {
+        float d=density(), bw=210*d, bh=58*d, x=w/2-bw/2, y=h/2+8*d;
+        p.setColor(0xff16834b);c.drawRoundRect(x,y,x+bw,y+bh,14*d,14*d,p);
+        p.setColor(0xffa7ffd0);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2*d);
+        c.drawRoundRect(x,y,x+bw,y+bh,14*d,14*d,p);p.setStyle(Paint.Style.FILL);
+        label(c,"RESPAWNAR",w/2,y+bh/2+6*d,19*d,Color.WHITE);
+    }
+
+    boolean hitRespawn(float x,float y) {
+        float d=density(),bw=210*d,bh=58*d,left=getWidth()/2-bw/2,top=getHeight()/2+8*d;
+        return !alive && x>=left && x<=left+bw && y>=top && y<=top+bh;
+    }
+
+    void respawn() {
+        if(alive)return;
+        if(offline) {
+            int x=world/2,y=world/2;snake.clear();
+            for(int i=0;i<4;i++)snake.add(new int[]{x-i,y});
+            alive=true;score=0;dx=1;dy=0;nx=1;ny=0;status="Vivo";
+            NativeAudio.randomTrack();
+        } else {
+            send("{\"type\":\"respawn\"}");
+        }
+        invalidate();
     }
 
     void drawHud(Canvas c,float w,float h) {
@@ -403,6 +436,8 @@ public class NativeGameView extends View {
 
         if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN) {
             float x=e.getX(index), y=e.getY(index);
+            if(action==MotionEvent.ACTION_DOWN && hitRespawn(x,y)) { respawn(); return true; }
+            if(!alive)return true;
             if(Math.hypot(x-runX,y-runY)<=runR+20*d) {
                 sprintPointer=pointer; sprint=true;
             } else if(steeringPointer==-1) {
