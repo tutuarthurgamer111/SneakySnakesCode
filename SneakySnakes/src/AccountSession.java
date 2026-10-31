@@ -47,6 +47,92 @@ public final class AccountSession {
         return m.find()?m.group(1).replace("\\n","\n").replace("\\\"","\"").replace("\\\\","\\"):null;
     }
 
+    public static boolean syncShopAction(String action, String skinId, SaveSystem save) {
+        String currentToken=token();
+        if(currentToken.isEmpty() || !lastServerUrl.startsWith("wss://")) return false;
+        CountDownLatch done=new CountDownLatch(1);
+        boolean[] success={false};
+        final WebSocketClient[] client=new WebSocketClient[1];
+        client[0]=new WebSocketClient(lastServerUrl, message -> {
+            String type=jsonString(message,"type");
+            if("auth_resumed".equals(type)) {
+                client[0].send("{\"type\":\""+action+"\",\"skinId\":\""+jsonEscape(skinId)+"\"}");
+            } else if("shop_result".equals(type)) {
+                success[0]=message.contains("\"accepted\":true");
+                String profile=extractObject(message,"profile");
+                if(success[0] && profile!=null && save!=null) {
+                    int coins=number(profile,"coins",-1);
+                    if(coins>=0) save.coins=coins;
+                    String equipped=jsonString(profile,"equippedSkin");
+                    if(equipped!=null) {
+                        save.currentSkinId=equipped;
+                        SkinSystem.setById(equipped);
+                    }
+                    String owned=stringArray(profile,"ownedSkins");
+                    if(owned!=null) {
+                        save.unlockedSkins=owned;
+                        SkinSystem.deserializeUnlocked(owned);
+                    }
+                    save.save();
+                }
+                done.countDown();
+            } else if("auth_error".equals(type) || "account_error".equals(type)) {
+                if("INVALID_SESSION".equals(jsonString(message,"code"))) clearToken();
+                done.countDown();
+            }
+        }, () -> client[0].send("{\"type\":\"auth_resume\",\"token\":\""+jsonEscape(currentToken)+"\"}"), () -> done.countDown());
+        new Thread(client[0],"sneakysnakes-shop-sync").start();
+        try {
+            if(!done.await(12,TimeUnit.SECONDS)) success[0]=false;
+        } catch(InterruptedException e) {
+            Thread.currentThread().interrupt();
+            success[0]=false;
+        } finally {
+            client[0].close();
+        }
+        return success[0];
+    }
+
+    private static String extractObject(String json,String key) {
+        int i=json.indexOf("\""+key+"\"");
+        if(i<0)return null;
+        int start=json.indexOf('{',i);
+        if(start<0)return null;
+        int depth=0;
+        boolean quoted=false,escape=false;
+        for(int p=start;p<json.length();p++) {
+            char c=json.charAt(p);
+            if(quoted) {
+                if(escape)escape=false;
+                else if(c=='\\')escape=true;
+                else if(c=='"')quoted=false;
+            } else if(c=='"')quoted=true;
+            else if(c=='{')depth++;
+            else if(c=='}'&&--depth==0)return json.substring(start,p+1);
+        }
+        return null;
+    }
+
+    private static int number(String json,String key,int fallback) {
+        Matcher m=Pattern.compile("\""+Pattern.quote(key)+"\"\\s*:\\s*(-?\\d+)").matcher(json);
+        try { return m.find()?Integer.parseInt(m.group(1)):fallback; }
+        catch(Exception e) { return fallback; }
+    }
+
+    private static String stringArray(String json,String key) {
+        int i=json.indexOf("\""+key+"\"");
+        if(i<0)return null;
+        int a=json.indexOf('[',i),b=json.indexOf(']',a);
+        if(a<0||b<0)return null;
+        Matcher m=Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"").matcher(json.substring(a+1,b));
+        StringBuilder out=new StringBuilder();
+        while(m.find()) {
+            if(out.length()>0)out.append('|');
+            out.append(m.group(1));
+        }
+        return out.toString();
+    }
+
     public static boolean ensureLogin(Component parent, String serverUrl) {
         if (!token().isEmpty()) return true;
         Object[] options={"Login","Create account","Play as guest","Cancel"};
