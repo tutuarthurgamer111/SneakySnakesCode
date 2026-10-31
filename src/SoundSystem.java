@@ -4,7 +4,7 @@ import java.util.Random;
 
 public class SoundSystem {
 
-    private static final String RES="SneakySnakes/Resources/content/sounds/";
+    private static final String RES="content/sounds/";
     private static final Random RNG=new Random();
 
     private static boolean enabled=true;
@@ -14,7 +14,7 @@ public class SoundSystem {
     public static void playOnce(String file){
         if(!enabled)return;
         try{
-            AudioInputStream a=AudioSystem.getAudioInputStream(new File(RES+file));
+            AudioInputStream a=AudioSystem.getAudioInputStream(AppPaths.resourceFile(RES+file));
             Clip c=AudioSystem.getClip();
             c.open(a);
             applyVolume(c);
