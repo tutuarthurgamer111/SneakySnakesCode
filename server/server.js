@@ -319,8 +319,8 @@ const id = nextId++;
                 break;
             }
             case 'coin_collect': {
-                if (!player.alive) break;
                 const cx = msg.x, cy = msg.y;
+                if (!player.alive || !player.body.length || player.body[0][0] !== cx || player.body[0][1] !== cy) break;
                 const ci = checkCoinEaten(cx, cy);
                 if (ci >= 0) {
                     coins.splice(ci, 1);
@@ -332,6 +332,11 @@ const id = nextId++;
                     broadcastCoins();
                     sendProfile(player);
                 }
+                break;
+            }
+            case 'identify': {
+                player.name = String(msg.name || ('Player' + id)).substring(0, 24);
+                sendProfile(player);
                 break;
             }
             case 'profile': {
