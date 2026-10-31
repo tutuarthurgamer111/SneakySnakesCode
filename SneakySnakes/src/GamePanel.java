@@ -1257,9 +1257,39 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     }
 
     private void openAccountManager() {
-        JFrame frame=(JFrame)SwingUtilities.getWindowAncestor(this);if(frame==null)return;
-        ChooseServerDialog dialog=new ChooseServerDialog(frame);dialog.setVisible(true);String url=dialog.getSelectedUrl();
-        if(url==null||url.trim().isEmpty())return;AccountSession.manageAccount(frame,url.trim());requestFocusInWindow();
+        JFrame frame=(JFrame)SwingUtilities.getWindowAncestor(this);
+        if(frame==null)return;
+        JDialog loading=new JDialog(frame,"Conta SneakySnakes",true);
+        JLabel message=new JLabel("Conectando ao servidor oficial...",SwingConstants.CENTER);
+        message.setBorder(BorderFactory.createEmptyBorder(24,30,24,30));
+        loading.add(message);
+        loading.pack();
+        loading.setLocationRelativeTo(frame);
+        new SwingWorker<String,Void>() {
+            @Override protected String doInBackground() {
+                java.util.List<String> servers=new ChooseServerDialog(frame).fetchServers();
+                for(String address:servers) if(address.startsWith("wss://")) return address;
+                return null;
+            }
+            @Override protected void done() {
+                loading.dispose();
+                try {
+                    String url=get();
+                    if(url==null) {
+                        JOptionPane.showMessageDialog(frame,
+                            "Nenhum servidor oficial seguro (WSS) está disponível no momento.",
+                            "Conta indisponível",JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    AccountSession.manageAccount(frame,url);
+                    requestFocusInWindow();
+                } catch(Exception ex) {
+                    JOptionPane.showMessageDialog(frame,"Não foi possível localizar o servidor oficial.",
+                        "Erro de conexão",JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
+        loading.setVisible(true);
     }
 
     private void launchOnlineMode() {
