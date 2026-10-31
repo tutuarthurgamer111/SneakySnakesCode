@@ -248,6 +248,12 @@ public class NativeGameView extends View {
 
     void die(boolean sendSound) {
         alive=false; status="Você morreu"; NativeAudio.stopMusic();
+        if(getContext() instanceof Activity) {
+            Activity a=(Activity)getContext();
+            android.content.SharedPreferences prefs=a.getPreferences(Context.MODE_PRIVATE);
+            int best=Math.max(prefs.getInt("skin_high_score",0),score);
+            prefs.edit().putInt("skin_high_score",best).apply();
+        }
         if(sendSound) NativeAudio.play("hit");
     }
 
@@ -390,6 +396,7 @@ public class NativeGameView extends View {
     int skinColor() {
         switch(skinId) {
             case "cocoa": return 0xff562424;
+            case "bright_blue": return 0xff0d69ac;
             case "bright_green": return 0xff4b974b;
             case "lilac": return 0xffa75e9b;
             case "hurricane": return 0xff635f62;
@@ -399,6 +406,7 @@ public class NativeGameView extends View {
             case "really_blue": return 0xff002060;
             case "really_red": return 0xffff0000;
             case "gold": return 0xffc89600;
+            case "neon_green": return 0xff00ea00;
             case "neon_green": return 0xff00ea00;
             case "neon_pink": return 0xffff0096;
             case "neon_blue": return 0xff0096ff;
@@ -412,7 +420,11 @@ public class NativeGameView extends View {
     void drawSnakeSegment(Canvas c,float ox,float oy,float z,int x,int y,boolean head) {
         float left=ox+x*z,top=oy+y*z;
         if(left>getWidth()||top>getHeight()||left+z<0||top+z<0)return;
-        if(detailedGraphics && snakeTexture!=null) {
+        if("rainbow".equals(skinId)) {
+            float hue=((System.currentTimeMillis()/12 + x*17 + y*7)%360)/360f;
+            int rainbow=Color.HSVToColor(new float[]{hue,0.9f,1f});
+            cell(c,ox,oy,z,x,y,head?Color.rgb(Math.min(255,Color.red(rainbow)+35),Math.min(255,Color.green(rainbow)+35),Math.min(255,Color.blue(rainbow)+35)):rainbow);
+        } else if(detailedGraphics && snakeTexture!=null) {
             Rect dst=new Rect((int)(left+1),(int)(top+1),(int)(left+z-1),(int)(top+z-1));
             c.drawBitmap(snakeTexture,null,dst,p);
             p.setColor(0x55000000);c.drawRoundRect(dst.left,dst.top,dst.right,dst.bottom,4,4,p);
