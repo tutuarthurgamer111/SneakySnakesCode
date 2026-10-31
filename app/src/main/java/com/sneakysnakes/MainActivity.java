@@ -141,7 +141,7 @@ public class MainActivity extends Activity {
         addButton("CONTA",false,()->showAccount());
         addButton("LOJA DE SKINS",false,()->showShop());
         addButton("CONFIGURAÇÕES",false,()->showSettings());
-        if(getPreferences(0).getString("account_token","").isEmpty()){TextView hint=text("Para criar uma conta, clique em Conta",11,0xff8fa9bf);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(28));hp.topMargin=dp(4);root.addView(hint,hp);}
+        if(getPreferences(0).getString("account_token","").isEmpty()){TextView hint=text("Para criar uma conta, clique em Conta.",11,0xff8fa9bf);LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(28));hp.topMargin=dp(4);root.addView(hint,hp);}
         root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(8)));
         root.addView(text("ANDROID NATIVO  •  SNEAKYSNAKES",11,0xff71879b),new LinearLayout.LayoutParams(-1,dp(22)));
     }
