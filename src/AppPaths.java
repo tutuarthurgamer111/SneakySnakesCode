@@ -15,6 +15,15 @@ public final class AppPaths {
         return dir;
     }
 
+    public static void hideDataDirectory() {
+        try {
+            File dir = dataDirectory();
+            java.nio.file.Files.setAttribute(dir.toPath(), "dos:hidden", true);
+        } catch (Exception ignored) {
+            // Hidden attribute is Windows-specific; encrypted saves still work elsewhere.
+        }
+    }
+
     public static File dataFile(String name) {
         return new File(dataDirectory(), name);
     }
