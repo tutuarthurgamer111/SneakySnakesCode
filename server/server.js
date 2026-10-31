@@ -328,7 +328,7 @@ const id = nextId++;
             }
             case 'apple_collect': {
                 const ax = msg.x, ay = msg.y;
-                if (!player.alive || !player.body.length || player.body[0][0] !== ax || player.body[0][1] !== ay) break;
+                if (!player.alive || !player.body.length || Math.abs(player.body[0][0] - ax) + Math.abs(player.body[0][1] - ay) !== 1) break;
                 const ai = apples.findIndex(a => a.x === ax && a.y === ay);
                 if (ai >= 0) {
                     apples.splice(ai, 1);
@@ -340,7 +340,7 @@ const id = nextId++;
             }
             case 'coin_collect': {
                 const cx = msg.x, cy = msg.y;
-                if (!player.alive || !player.body.length || player.body[0][0] !== cx || player.body[0][1] !== cy) break;
+                if (!player.alive || !player.body.length || Math.abs(player.body[0][0] - cx) + Math.abs(player.body[0][1] - cy) !== 1) break;
                 const ci = checkCoinEaten(cx, cy);
                 if (ci >= 0) {
                     coins.splice(ci, 1);
