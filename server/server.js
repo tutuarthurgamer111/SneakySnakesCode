@@ -279,11 +279,10 @@ const id = nextId++;
         switch (msg.type) {
             case 'join': {
                 player.name = String(msg.name || ('Player' + id)).substring(0, 24);
-                const profile = getProfile(player.name);
                 const requestedSkin = String(msg.skin || 'bright_blue').substring(0, 40);
-                player.skin = (requestedSkin === 'bright_blue' || requestedSkin === 'bright_green' || profile.skins.includes(requestedSkin)) ? requestedSkin : profile.equipped;
-                if (player.skin !== 'bright_blue' && player.skin !== 'bright_green' && !profile.skins.includes(player.skin)) player.skin = 'bright_blue';
-                player.coins = profile.coins;
+                // Skins compradas no Android ficam salvas localmente; o servidor apenas aplica a aparência enviada.
+                player.skin = (requestedSkin === 'bright_blue' || requestedSkin === 'bright_green' || Object.prototype.hasOwnProperty.call(SKIN_PRICES, requestedSkin)) ? requestedSkin : 'bright_blue';
+                player.coins = 0;
                 player.alive = true;
                 const sx = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
                 const sy = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
