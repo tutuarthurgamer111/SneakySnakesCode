@@ -8,7 +8,7 @@ import java.util.Scanner;
  */
 public class SettingsSystem {
 
-    public static final String SETTINGS_PATH = "./data/settings.json";
+    public static final String SETTINGS_PATH = AppPaths.dataFile("settings.json").getAbsolutePath();
 
     // Themes
     public enum Theme { DAY, NIGHT, CRIMSON, FOREST }
@@ -37,7 +37,7 @@ public class SettingsSystem {
 
     public void save() {
         try {
-            File folder = new File("./data");
+            File folder = AppPaths.dataDirectory();
             if (!folder.exists()) folder.mkdirs();
             PrintWriter w = new PrintWriter(new FileWriter(SETTINGS_PATH));
             w.println("{");
