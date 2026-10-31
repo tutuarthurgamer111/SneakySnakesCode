@@ -26,7 +26,8 @@ public class NativeGameView extends View {
     boolean respawnPressed=false;
     float steeringX, steeringY;
     Bitmap appleBitmap, coinBitmap, snakeTexture;
-    String skinId="bright_blue";
+    String skinId="bright_blue", joinName="Player";
+    boolean authPending=false;
     boolean showSnakeFace=true, detailedGraphics=true;
 
     static class Player { String name; boolean alive; int[][] body; }
@@ -61,13 +62,21 @@ public class NativeGameView extends View {
             for(int i=0;i<2;i++) spawnLocalApple();
             NativeAudio.randomTrack();
         } else {
+            joinName=name;
             net=new NativeSocket(address,this::message);
             net.start();
-            net.send("{\"type\":\"join\",\"name\":\""+esc(name)+"\",\"skin\":\""+esc(skinId)+"\"}");
+            String token="";
+            if(c instanceof Activity) token=((Activity)c).getPreferences(Context.MODE_PRIVATE).getString("account_token","");
+            if(!token.isEmpty()) {
+                authPending=true;
+                try { JSONObject auth=new JSONObject();auth.put("type","auth_resume");auth.put("token",token);net.send(auth.toString()); }
+                catch(Exception ignored) { authPending=false;sendJoin(); }
+            } else sendJoin();
         }
     }
 
     static String esc(String s) { return s.replace("\\","\\\\").replace("\"","\\\""); }
+    void sendJoin() { send("{\"type\":\"join\",\"name\":\""+esc(joinName)+"\",\"skin\":\""+esc(skinId)+"\"}"); }
     void send(String s) { if(net!=null) net.send(s); }
 
     void message(String s) {
@@ -79,7 +88,18 @@ public class NativeGameView extends View {
                     id=o.optInt("id"); world=Math.max(32,o.optInt("worldTiles",64));
                     int x=world/2,y=world/2; snake.clear();
                     for(int i=0;i<4;i++) snake.add(new int[]{x-i,y});
-                    connected=true; status="Conectado"; NativeAudio.randomTrack();
+                    connected=!authPending; status=authPending?"Autenticando conta...":"Conectado";
+                    if(connected) NativeAudio.randomTrack();
+                } else if(type.equals("auth_resumed")) {
+                    JSONObject profile=o.optJSONObject("profile");
+                    if(profile!=null)saveServerProfile(profile);
+                    authPending=false;sendJoin();connected=true;status="Conectado";NativeAudio.randomTrack();
+                } else if(type.equals("auth_error")) {
+                    if(authPending) {
+                        authPending=false;
+                        if(getContext() instanceof Activity)((Activity)getContext()).getPreferences(Context.MODE_PRIVATE).edit().remove("account_token").apply();
+                        sendJoin();connected=true;status="Conectado como visitante";
+                    }
                 } else if(type.equals("state")) {
                     JSONArray a=o.optJSONArray("players");
                     if(a!=null) {
@@ -100,18 +120,15 @@ public class NativeGameView extends View {
                     }
                 } else if(type.equals("foods")) items(o.optJSONArray("foods"),foods,true);
                 else if(type.equals("profile")) {
-                    if(getContext() instanceof Activity) {
-                        Activity activity=(Activity)getContext();
-                        android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
-                        int balance=Math.max(0,o.optInt("coins",0));
-                        prefs.edit().putInt("server_coins",balance).apply();
-                    }
+                    JSONObject profile=o.optJSONObject("profile");
+                    if(profile!=null)saveServerProfile(profile);
                 } else if(type.equals("coin_result")) {
                     if(o.optBoolean("accepted") && getContext() instanceof Activity) {
                         Activity activity=(Activity)getContext();
                         android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
-                        int balance=Math.max(0,prefs.getInt("server_coins",0));
-                        prefs.edit().putInt("server_coins",balance+3).apply();
+                        prefs.edit().putInt("server_coins",Math.max(0,o.optInt("balance",0))).apply();
+                        JSONObject profile=o.optJSONObject("profile");
+                        if(profile!=null)saveServerProfile(profile);
                     }
                 } else if(type.equals("server_shutdown")) {
                     status="Servidor reiniciando...";
@@ -127,6 +144,21 @@ public class NativeGameView extends View {
                 invalidate();
             } catch(Exception e) { status="Erro ao ler dados"; invalidate(); }
         });
+    }
+
+    void saveServerProfile(JSONObject profile) {
+        if(!(getContext() instanceof Activity))return;
+        Activity activity=(Activity)getContext();
+        JSONArray owned=profile.optJSONArray("ownedSkins");
+        StringBuilder ids=new StringBuilder();
+        if(owned!=null)for(int i=0;i<owned.length();i++){if(ids.length()>0)ids.append('|');ids.append(owned.optString(i));}
+        activity.getPreferences(Context.MODE_PRIVATE).edit()
+            .putInt("server_coins",Math.max(0,profile.optInt("coins",0)))
+            .putString("server_owned_skins",ids.toString())
+            .putString("server_equipped_skin",profile.optString("equippedSkin","bright_green"))
+            .putString("account_nickname",profile.optString("nickname",""))
+            .putInt("skin_high_score",Math.max(0,profile.optInt("highScore",0)))
+            .apply();
     }
 
     void items(JSONArray a,List<int[]> out,boolean rarity) {
