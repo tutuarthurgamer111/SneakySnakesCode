@@ -41,7 +41,7 @@ public class SoundSystem {
         if(!enabled)return;
 
         try{
-            AudioInputStream a=AudioSystem.getAudioInputStream(new File(RES+file));
+            AudioInputStream a=AudioSystem.getAudioInputStream(AppPaths.resourceFile(RES+file));
             music=AudioSystem.getClip();
             music.open(a);
             applyVolume(music);
