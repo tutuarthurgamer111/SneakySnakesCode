@@ -65,7 +65,7 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
   windows:
-    name: Build Windows single-file installer
+    name: Build Windows portable and installer
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -82,17 +82,25 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           jar --create --file build/package-input/SneakySnakes.jar --main-class SneakySnakes -C build/classes .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Build self-contained Windows app image
+      - name: Build self-contained Windows portable app with logo
         shell: pwsh
         run: |
-          jpackage --type app-image --name SneakySnakes --app-version 4.0.3 --input build/package-input --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/image --vendor "SneakySnakes"
+          jpackage --type app-image --name SneakySnakes --app-version 4.0.3 --input build/package-input --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/image --vendor "SneakySnakes" --icon SneakySnakes/Resources/favicon.ico
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force build/image/SneakySnakes/SneakySnakes | Out-Null
           Copy-Item -Recurse SneakySnakes/Resources build/image/SneakySnakes/SneakySnakes/
-      - name: Create one-file Windows installer
+          New-Item -ItemType Directory -Force build/portable | Out-Null
+          Compress-Archive -Path build/image/SneakySnakes -DestinationPath build/portable/SneakySnakes-4.0.3-Portable.zip -CompressionLevel Optimal
+      - name: Upload portable Windows app
+        uses: actions/upload-artifact@v4
+        with:
+          name: SneakySnakes-Windows-Portable
+          path: build/portable/SneakySnakes-4.0.3-Portable.zip
+          if-no-files-found: error
+      - name: Create one-file Windows installer with logo
         shell: pwsh
         run: |
-          jpackage --type exe --app-image build/image/SneakySnakes --name SneakySnakes --app-version 4.0.3 --dest build/installer --vendor "SneakySnakes" --win-per-user-install --win-menu --win-shortcut
+          jpackage --type exe --app-image build/image/SneakySnakes --name SneakySnakes --app-version 4.0.3 --dest build/installer --vendor "SneakySnakes" --icon SneakySnakes/Resources/favicon.ico --win-per-user-install --win-menu --win-shortcut
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload single Windows installer
         uses: actions/upload-artifact@v4
