@@ -45,6 +45,7 @@ public class SneakySnakes {
                             );
                             frame.setVisible(true);
                         }
+                        frame.requestFocus();
                         gamePanel.requestFocusInWindow();
                     }
                 }
