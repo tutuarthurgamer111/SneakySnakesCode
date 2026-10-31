@@ -103,21 +103,30 @@ function getUptime() {
     return `Server Est: ${parts.join(' ')}`;
 }
 
+let appleRespawnTimer = null;
 function spawnApple() {
-    const { x, y } = randomTile();
-    apples.push({ x, y });
+    if (apples.length) return;
+    let spot = null;
+    for (let attempt = 0; attempt < 500; attempt++) {
+        const candidate = randomTile();
+        const blocked = [...players.values()].some(p => p.body.some(part => part[0] === candidate.x && part[1] === candidate.y))
+            || foods.some(f => f.x === candidate.x && f.y === candidate.y)
+            || coins.some(c => c.x === candidate.x && c.y === candidate.y);
+        if (!blocked) { spot = candidate; break; }
+    }
+    if (!spot) return;
+    apples.push(spot);
+    broadcastApples();
 }
-
-function ensureApples() {
-    while (apples.length < 5) spawnApple();
+function scheduleAppleRespawn() {
+    if (appleRespawnTimer) clearTimeout(appleRespawnTimer);
+    appleRespawnTimer = setTimeout(spawnApple, 4 * 60 * 1000 + Math.floor(Math.random() * 8 * 60 * 1000));
 }
-
 function broadcastApples() {
     broadcastAll({ type: 'apple_spawn', apples: apples.map(a => [a.x, a.y]) });
 }
-
-ensureApples();
-setInterval(() => { ensureApples(); broadcastApples(); }, 5000);
+// No fixed spawn points and no startup batch: the first apple also waits for a random interval.
+scheduleAppleRespawn();
 
 //send(ws, { type: 'apple_spawn', apples: apples.map(a => [a.x, a.y]) });
 
@@ -314,6 +323,18 @@ const id = nextId++;
                     const food = foods[fi]; foods.splice(fi, 1);
                     player.score += ([10, 30, 80, 200][food.rarity] || 10);
                     ensureFoods(); broadcastFoods();
+                }
+                break;
+            }
+            case 'apple_collect': {
+                const ax = msg.x, ay = msg.y;
+                if (!player.alive || !player.body.length || player.body[0][0] !== ax || player.body[0][1] !== ay) break;
+                const ai = apples.findIndex(a => a.x === ax && a.y === ay);
+                if (ai >= 0) {
+                    apples.splice(ai, 1);
+                    player.score += 50;
+                    broadcastApples();
+                    scheduleAppleRespawn();
                 }
                 break;
             }
