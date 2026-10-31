@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
 
     Button button(String value) {
         Button b = new Button(this); b.setText(value); b.setAllCaps(false);
+        b.setOnTouchListener((view,event) -> { if(event.getAction()==MotionEvent.ACTION_DOWN) NativeAudio.play("click"); return false; });
         return b;
     }
 
