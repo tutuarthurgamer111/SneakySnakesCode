@@ -3,7 +3,7 @@ name: Build SneakySnakes for Windows and Android
 on:
   workflow_dispatch:
   push:
-    branches: [main, android-port]
+    branches: [main, android-port, feature/account-sync-client]
 
 permissions:
   contents: read
@@ -77,7 +77,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force build/classes, build/package-input | Out-Null
-          $files = Get-ChildItem src -Filter *.java -File | ForEach-Object { $_.FullName }
+          $files = Get-ChildItem SneakySnakes/src -Filter *.java -File | ForEach-Object { $_.FullName }
           javac -encoding UTF-8 -d build/classes $files
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           jar --create --file build/package-input/SneakySnakes.jar --main-class SneakySnakes -C build/classes .
