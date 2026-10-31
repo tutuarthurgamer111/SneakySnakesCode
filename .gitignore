@@ -1,0 +1,23 @@
+# Java / desktop build output
+*.class
+dist/
+build/
+out/
+*.log
+
+# Android / Gradle
+.gradle/
+local.properties
+.idea/
+*.iml
+app/build/
+
+# Node
+node_modules/
+server/node_modules/
+
+# Local data / credentials
+.env
+.env.*
+*.keystore
+*.jks
