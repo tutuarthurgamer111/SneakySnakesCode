@@ -247,7 +247,7 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
                 case "welcome": {
                     myId = jsonInt(msg, "id");
                     int serverTiles = jsonInt(msg, "worldTiles");
-                    if (serverTiles > 0) { WORLD_TILES = serverTiles; WORLD_SIZE = WORLD_TILES * TILE; }
+                    if (serverTiles > 0) { WORLD_TILES = serverTiles; WORLD_SIZE = WORLD_TILES * TILE; myBody = new int[WORLD_TILES * WORLD_TILES * 2 + 16]; }
                     statusMsg = "Connected as #" + myId;
                     int sx = WORLD_TILES/2, sy = WORLD_TILES/2;
                     myLen = 4;
@@ -285,6 +285,14 @@ case "state":
                     }
                     break;
                 }
+                case "coin_result": {
+                    if (jsonBool(msg, "accepted")) {
+                        myCoins += 3;
+                        if (saveRef != null) { saveRef.coins += 3; saveRef.save(); }
+                    }
+                    break;
+                }
+                case "server_shutdown": statusMsg = "Server restarting..."; break;
                 case "foods":        parseFoods(msg);  break;
                 case "coin_spawn":   parseCoins(msg);  break;
                 case "apple_spawn":  parseApples(msg); break; // ← new Apple item
@@ -300,7 +308,6 @@ case "state":
      */
     private void persistSessionStats() {
         if (saveRef == null) return;
-        saveRef.coins    += myCoins;
         saveRef.foodsEaten += myApples; // apples count as foods for statistics
         if (myScore > saveRef.highScore) saveRef.highScore = myScore;
         saveRef.deaths++;
@@ -512,7 +519,6 @@ case "state":
             for (int ci = serverCoins.size() - 1; ci >= 0; ci--) {
                 int[] coin = serverCoins.get(ci);
                 if (coin[0] == newHX && coin[1] == newHY) {
-                    myCoins++;
                     serverCoins.remove(ci);
                     particles.spawnFoodCollect(newHX*TILE+TILE/2f, newHY*TILE+TILE/2f, new Color(255,215,0), 8);
                     SoundSystem.play("eat");
