@@ -106,6 +106,15 @@ public class NativeGameView extends View {
                         int balance=Math.max(0,o.optInt("coins",0));
                         prefs.edit().putInt("server_coins",balance).apply();
                     }
+                } else if(type.equals("coin_result")) {
+                    if(o.optBoolean("accepted") && getContext() instanceof Activity) {
+                        Activity activity=(Activity)getContext();
+                        android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
+                        int balance=Math.max(0,prefs.getInt("server_coins",0));
+                        prefs.edit().putInt("server_coins",balance+3).apply();
+                    }
+                } else if(type.equals("server_shutdown")) {
+                    status="Servidor reiniciando...";
                 } else if(type.equals("coin_spawn")) items(o.optJSONArray("coins"),coins,false);
                 else if(type.equals("apple_spawn")) items(o.optJSONArray("apples"),apples,false);
                 else if(type.equals("respawned")) {
@@ -131,6 +140,8 @@ public class NativeGameView extends View {
     boolean occupied(int x,int y) {
         for(int[] q:snake) if(q[0]==x&&q[1]==y)return true;
         for(int[] q:foods) if(q[0]==x&&q[1]==y)return true;
+        for(int[] q:coins) if(q[0]==x&&q[1]==y)return true;
+        for(int[] q:apples) if(q[0]==x&&q[1]==y)return true;
         return false;
     }
     void spawnLocalFood() {
@@ -169,7 +180,7 @@ public class NativeGameView extends View {
     }
 
     int targetOfflineCoins() { return 3+(level-1)*2; }
-    void spawnLocalApple(){apples.add(new int[]{(int)(Math.random()*world),(int)(Math.random()*world),0});}
+    void spawnLocalApple(){for(int i=0;i<300;i++){int x=(int)(Math.random()*world),y=(int)(Math.random()*world);if(!occupied(x,y)){apples.add(new int[]{x,y,0});return;}}}
 
     void step() {
         if(!connected||!alive||snake.isEmpty())return;
@@ -207,12 +218,6 @@ public class NativeGameView extends View {
             coins.remove(a); coinsN+=3; NativeAudio.play("eat");
             if(!offline) {
                 send("{\"type\":\"coin_collect\",\"x\":"+x+",\"y\":"+y+"}");
-                if(getContext() instanceof Activity) {
-                    Activity activity=(Activity)getContext();
-                    android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
-                    int balance=Math.max(0,prefs.getInt("server_coins",0));
-                    prefs.edit().putInt("server_coins",balance+3).apply();
-                }
             } else {
                 if(getContext() instanceof Activity) {
                     Activity activity=(Activity)getContext();
