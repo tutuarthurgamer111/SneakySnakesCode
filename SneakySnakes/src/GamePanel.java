@@ -1325,8 +1325,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 requestFocusInWindow();
                 SoundSystem.startMenuMusic();
                 screen = Screen.MENU;
-            }, save);
-        });
+            });
+        }, save);
 
         frame.getContentPane().removeAll();
         frame.getContentPane().add(ogp);
