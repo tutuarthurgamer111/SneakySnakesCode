@@ -39,13 +39,13 @@ public final class AccountSession {
     }
 
     private static String jsonEscape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+        return value.replace("\", "\\\").replace("\"", "\\"")
             .replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private static String jsonString(String json, String key) {
         Matcher m=Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"").matcher(json);
-        return m.find()?m.group(1).replace("\\n","\n").replace("\\\"","\"").replace("\\\\","\\"):null;
+        return m.find()?m.group(1).replace("\\n","\n").replace("\\"","\"").replace("\\\","\"):null;
     }
 
     public static boolean syncShopAction(String action, String skinId, SaveSystem save) {
@@ -222,10 +222,10 @@ public final class AccountSession {
         final WebSocketClient[] client = new WebSocketClient[1];
         client[0] = new WebSocketClient(serverUrl, message -> {
             String type = jsonString(message, "type");
-            if ("auth_resumed".equals(type)) client[0].send("{\\"type\\":\\"auth_delete\\",\\"password\\":\\""+jsonEscape(password)+"\\"}");
+            if ("auth_resumed".equals(type)) client[0].send("{\"type\":\"auth_delete\",\"password\":\""+jsonEscape(password)+"\"}");
             else if ("account_deleted".equals(type)) { success[0] = true; done.countDown(); }
             else if ("auth_error".equals(type) || "account_error".equals(type)) { error[0] = jsonString(message, "code"); done.countDown(); }
-        }, () -> client[0].send("{\\"type\\":\\"auth_resume\\",\\"token\\":\\""+jsonEscape(currentToken)+"\\"}"), () -> done.countDown());
+        }, () -> client[0].send("{\"type\":\"auth_resume\",\"token\":\""+jsonEscape(currentToken)+"\"}"), () -> done.countDown());
         new Thread(client[0], "sneakysnakes-account-delete").start();
         try { if (!done.await(15, TimeUnit.SECONDS)) error[0] = "CONNECTION_TIMEOUT"; }
         catch (InterruptedException e) { Thread.currentThread().interrupt(); error[0] = "INTERRUPTED"; }
