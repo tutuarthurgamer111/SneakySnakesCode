@@ -490,10 +490,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (getWidth() <= 0 || getHeight() <= 0) return;
-        // Fill the available window area; the game viewport follows its current aspect ratio.
+        // Keep the game's 4:3 canvas proportional. The player may resize the window,
+        // but the game/HUD never stretches; unused space becomes letterboxing.
+        double scale = Math.min((double)getWidth() / WIDTH, (double)getHeight() / HEIGHT);
+        int drawW = (int)Math.round(WIDTH * scale);
+        int drawH = (int)Math.round(HEIGHT * scale);
+        int offsetX = (getWidth() - drawW) / 2;
+        int offsetY = (getHeight() - drawH) / 2;
         Graphics2D g2 = (Graphics2D)g.create();
+        g2.setColor(Color.BLACK);
+        g2.fillRect(0, 0, getWidth(), getHeight());
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(buffer, 0, 0, getWidth(), getHeight(), null);
+        g2.drawImage(buffer, offsetX, offsetY, drawW, drawH, null);
         g2.dispose();
     }
 
@@ -1161,9 +1169,17 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
     private int[] scaleMouseCoords(int mx, int my) {
         if (getWidth() <= 0 || getHeight() <= 0) return new int[]{-1, -1};
-        double scaleX = (double)WIDTH / getWidth();
-        double scaleY = (double)HEIGHT / getHeight();
-        return new int[]{(int)Math.floor(mx * scaleX), (int)Math.floor(my * scaleY)};
+        double scale = Math.min((double)getWidth() / WIDTH, (double)getHeight() / HEIGHT);
+        if (scale <= 0) return new int[]{-1, -1};
+        int drawW = (int)Math.round(WIDTH * scale);
+        int drawH = (int)Math.round(HEIGHT * scale);
+        int offsetX = (getWidth() - drawW) / 2;
+        int offsetY = (getHeight() - drawH) / 2;
+        int gameX = mx - offsetX;
+        int gameY = my - offsetY;
+        if (gameX < 0 || gameY < 0 || gameX >= drawW || gameY >= drawH)
+            return new int[]{-1, -1};
+        return new int[]{(int)(gameX / scale), (int)(gameY / scale)};
     }
 
     // ==========================================================
