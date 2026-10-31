@@ -295,7 +295,7 @@ case "state":
                     break;
                 }
                 case "auth_error": {
-                    if ("INVALID_SESSION".equals(jsonString(msg,"code"))) AccountSession.clearToken();
+                    AccountSession.clearToken();
                     break;
                 }
                 case "profile": {
@@ -307,7 +307,7 @@ case "state":
                     if (jsonBool(msg, "accepted")) {
                         int balance=jsonInt(msg,"balance");
                         if (saveRef != null && balance >= 0 && !jsonBool(msg,"guest")) {
-                            saveRef.coins=balance;saveRef.save();
+                            saveRef.coins=balance;myCoins=balance;saveRef.save();
                         } else if (jsonBool(msg,"guest")) myCoins += 3;
                     }
                     break;
