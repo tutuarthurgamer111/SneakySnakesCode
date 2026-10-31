@@ -490,14 +490,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (getWidth() <= 0 || getHeight() <= 0) return;
-        double scale = Math.min((double)getWidth() / WIDTH, (double)getHeight() / HEIGHT);
-        int drawW = (int)Math.round(WIDTH * scale);
-        int drawH = (int)Math.round(HEIGHT * scale);
-        int x = (getWidth() - drawW) / 2;
-        int y = (getHeight() - drawH) / 2;
+        // Fill the available window area; the game viewport follows its current aspect ratio.
         Graphics2D g2 = (Graphics2D)g.create();
         g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(buffer, x, y, drawW, drawH, null);
+        g2.drawImage(buffer, 0, 0, getWidth(), getHeight(), null);
         g2.dispose();
     }
 
@@ -1165,13 +1161,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
 
     private int[] scaleMouseCoords(int mx, int my) {
         if (getWidth() <= 0 || getHeight() <= 0) return new int[]{-1, -1};
-        double scale = Math.min((double)getWidth() / WIDTH, (double)getHeight() / HEIGHT);
-        double offsetX = (getWidth() - WIDTH * scale) / 2.0;
-        double offsetY = (getHeight() - HEIGHT * scale) / 2.0;
-        return new int[]{
-            (int)Math.floor((mx - offsetX) / scale),
-            (int)Math.floor((my - offsetY) / scale)
-        };
+        double scaleX = (double)WIDTH / getWidth();
+        double scaleY = (double)HEIGHT / getHeight();
+        return new int[]{(int)Math.floor(mx * scaleX), (int)Math.floor(my * scaleY)};
     }
 
     // ==========================================================
