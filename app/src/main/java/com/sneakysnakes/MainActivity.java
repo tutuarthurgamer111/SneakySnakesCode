@@ -222,10 +222,9 @@ public class MainActivity extends Activity {
 
     void saveLocalShop(String skin) {
         String current=getPreferences(0).getString("server_owned_skins","");
-        if(!current.contains("|"+skin+"|") && !current.equals(skin) &&
-           !Arrays.asList(current.split("\\\\|")).contains(skin)) {
-            current=current.isEmpty()?skin:current+"|"+skin;
-        }
+        boolean alreadyOwned=current.equals(skin) || current.startsWith(skin+"|") ||
+            current.endsWith("|"+skin) || current.contains("|"+skin+"|");
+        if(!alreadyOwned) current=current.isEmpty()?skin:current+"|"+skin;
         getPreferences(0).edit().putString("server_owned_skins",current)
             .putString("server_equipped_skin",skin).apply();
     }
