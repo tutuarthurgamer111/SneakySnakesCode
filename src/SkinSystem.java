@@ -19,7 +19,7 @@ public class SkinSystem {
         return skin.unlocked;
     }
 
-    public static final String TEXTURE_PATH = "SneakySnakes/Resources/content/textures/";
+    public static final String TEXTURE_PATH = "content/textures/";
             public static void unlock(Skin skin) {
             skin.unlocked = true;
         }
@@ -63,7 +63,7 @@ public class SkinSystem {
         public void loadTexture() {
             if (textureFile == null || texture != null) return;
             try {
-                File f = new File(TEXTURE_PATH + textureFile);
+                File f = AppPaths.resourceFile(TEXTURE_PATH + textureFile);
                 if (f.exists()) texture = ImageIO.read(f);
             } catch (Exception e) {
                 System.err.println("Could not load texture: " + textureFile);
@@ -125,7 +125,7 @@ public class SkinSystem {
     }
 
     private static void discoverExtraTextures() {
-        File folder = new File(TEXTURE_PATH);
+        File folder = AppPaths.resourceFile(TEXTURE_PATH);
         if (!folder.exists() || !folder.isDirectory()) return;
         File[] files = folder.listFiles((d, n) -> n.toLowerCase().endsWith(".png"));
         if (files == null) return;
