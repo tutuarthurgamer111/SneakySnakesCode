@@ -17,7 +17,7 @@ import javax.imageio.ImageIO;
  */
 public class AccessorySystem {
 
-    private static final String ASSET_PATH = "SneakySnakes/Resources/content/accessories/";
+    private static final String ASSET_PATH = "content/accessories/";
 
     // ── Tipos ────────────────────────────────────────────────────────────────
     public enum Accessory {
@@ -250,7 +250,7 @@ public class AccessorySystem {
         if (tried[idx]) return images[idx];
         tried[idx] = true;
         try {
-            File f = new File(ASSET_PATH + acc.name().toLowerCase() + ".png");
+            File f = AppPaths.resourceFile(ASSET_PATH + acc.name().toLowerCase() + ".png");
             if (f.exists()) images[idx] = ImageIO.read(f);
         } catch (Exception ignored) {}
         return images[idx];
