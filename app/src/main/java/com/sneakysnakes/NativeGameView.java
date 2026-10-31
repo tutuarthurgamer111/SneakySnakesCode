@@ -24,7 +24,8 @@ public class NativeGameView extends View {
     final Map<Integer,Player> others=new ConcurrentHashMap<>();
     int steeringPointer=-1, sprintPointer=-1;
     float steeringX, steeringY;
-    Bitmap appleBitmap, coinBitmap;
+    Bitmap appleBitmap, coinBitmap, snakeTexture;
+    String skinId="bright_blue";
     boolean showSnakeFace=true, detailedGraphics=true;
 
     static class Player { String name; boolean alive; int[][] body; }
@@ -42,6 +43,12 @@ public class NativeGameView extends View {
             android.content.SharedPreferences prefs=((Activity)c).getPreferences(Context.MODE_PRIVATE);
             showSnakeFace=prefs.getBoolean("snake_face",true);
             detailedGraphics=prefs.getBoolean("detailed_graphics",true);
+            skinId=prefs.getString("server_equipped_skin",prefs.getString("equipped_skin","bright_blue"));
+            String textureName=textureForSkin(skinId);
+            if(textureName!=null) {
+                try { snakeTexture=BitmapFactory.decodeStream(c.getAssets().open("textures/"+textureName)); }
+                catch(Exception ignored) {}
+            }
         }
         offline=local; mode=selectedMode;
         if (offline) {
@@ -55,7 +62,7 @@ public class NativeGameView extends View {
         } else {
             net=new NativeSocket(address,this::message);
             net.start();
-            net.send("{\"type\":\"join\",\"name\":\""+esc(name)+"\",\"skin\":\"bright_blue\"}");
+            net.send("{\"type\":\"join\",\"name\":\""+esc(name)+"\",\"skin\":\""+esc(skinId)+"\"}");
         }
     }
 
@@ -72,6 +79,18 @@ public class NativeGameView extends View {
                     int x=world/2,y=world/2; snake.clear();
                     for(int i=0;i<4;i++) snake.add(new int[]{x-i,y});
                     connected=true; status="Conectado"; NativeAudio.randomTrack();
+                } else if(type.equals("profile")) {
+                    int balance=Math.max(0,o.optInt("coins",0));
+                    JSONArray owned=o.optJSONArray("skins");
+                    StringBuilder list=new StringBuilder();
+                    if(owned!=null)for(int i=0;i<owned.length();i++){if(list.length()>0)list.append("|");list.append(owned.optString(i));}
+                    String equipped=o.optString("equipped","bright_blue");
+                    if(getContext() instanceof Activity) {
+                        ((Activity)getContext()).getPreferences(Context.MODE_PRIVATE).edit()
+                            .putInt("server_coins",balance).putString("server_owned_skins",list.toString())
+                            .putString("server_equipped_skin",equipped).apply();
+                    }
+                    skinId=equipped;
                 } else if(type.equals("state")) {
                     JSONArray a=o.optJSONArray("players");
                     if(a!=null) {
@@ -216,7 +235,7 @@ public class NativeGameView extends View {
         for(int[] a:coins)drawItem(c,ox,oy,z,a[0],a[1],coinBitmap,0xffffcf35);
         for(int[] a:apples)drawItem(c,ox,oy,z,a[0],a[1],appleBitmap,0xffef4545);
         for(Player q:others.values())if(q.alive)for(int[] a:q.body)cell(c,ox,oy,z,a[0],a[1],0xffd18a4c);
-        for(int i=snake.size()-1;i>=0;i--)cell(c,ox,oy,z,snake.get(i)[0],snake.get(i)[1],i==0?0xff7ce3ff:0xff269bc7);
+        for(int i=snake.size()-1;i>=0;i--)drawSnakeSegment(c,ox,oy,z,snake.get(i)[0],snake.get(i)[1],i==0);
         if(showSnakeFace && !snake.isEmpty()) drawSnakeFace(c,ox,oy,z,snake.get(0)[0],snake.get(0)[1]);
         drawHud(c,w,h);
         controls(c,w,h);
@@ -263,6 +282,56 @@ public class NativeGameView extends View {
         if(!partyEvent.isEmpty()) {
             p.setTextAlign(Paint.Align.CENTER); p.setTextSize(14*d); p.setTypeface(Typeface.DEFAULT_BOLD);
             p.setColor(0xffffdc64); c.drawText(partyEvent,w/2,top+panelH+24*d,p);
+        }
+    }
+
+    String textureForSkin(String id) {
+        switch(id) {
+            case "midnight": return "moon.png";
+            case "toxic": return "toxic.png";
+            case "rich": return "money.png";
+            case "tex_snake": return "snake_scale.png";
+            case "tex_pixel": return "pixel_camo.png";
+            case "tex_neon_grid": return "neon_grid.png";
+            case "tex_galaxy": return "galaxy.png";
+            case "tex_fire": return "fire.png";
+            case "tex_tomato": return "tomato.png";
+            default: return null;
+        }
+    }
+
+    int skinColor() {
+        switch(skinId) {
+            case "cocoa": return 0xff562424;
+            case "bright_green": return 0xff4b974b;
+            case "lilac": return 0xffa75e9b;
+            case "hurricane": return 0xff635f62;
+            case "violet": return 0xff6b327c;
+            case "bright_red": return 0xffc4281c;
+            case "yeller": return 0xffffdc00;
+            case "really_blue": return 0xff002060;
+            case "really_red": return 0xffff0000;
+            case "gold": return 0xffc89600;
+            case "neon_green": return 0xff00ea00;
+            case "neon_pink": return 0xffff0096;
+            case "neon_blue": return 0xff0096ff;
+            case "obsidian": return 0xff141423;
+            case "lava": return 0xffc83c00;
+            case "ice": return 0xffb4e6ff;
+            default: return 0xff269bc7;
+        }
+    }
+
+    void drawSnakeSegment(Canvas c,float ox,float oy,float z,int x,int y,boolean head) {
+        float left=ox+x*z,top=oy+y*z;
+        if(left>getWidth()||top>getHeight()||left+z<0||top+z<0)return;
+        if(detailedGraphics && snakeTexture!=null) {
+            Rect dst=new Rect((int)(left+1),(int)(top+1),(int)(left+z-1),(int)(top+z-1));
+            c.drawBitmap(snakeTexture,null,dst,p);
+            p.setColor(0x55000000);c.drawRoundRect(dst.left,dst.top,dst.right,dst.bottom,4,4,p);
+        } else {
+            int base=skinColor();
+            cell(c,ox,oy,z,x,y,head?Color.rgb(Math.min(255,Color.red(base)+35),Math.min(255,Color.green(base)+35),Math.min(255,Color.blue(base)+35)):base);
         }
     }
 
