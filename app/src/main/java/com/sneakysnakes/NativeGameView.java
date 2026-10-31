@@ -213,7 +213,15 @@ public class NativeGameView extends View {
                     int balance=Math.max(0,prefs.getInt("server_coins",0));
                     prefs.edit().putInt("server_coins",balance+3).apply();
                 }
-            } else { while(coins.size()<targetOfflineCoins()) spawnLocalCoin(); }
+            } else {
+                if(getContext() instanceof Activity) {
+                    Activity activity=(Activity)getContext();
+                    android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
+                    int balance=Math.max(0,prefs.getInt("offline_coins",0));
+                    prefs.edit().putInt("offline_coins",balance+3).apply();
+                }
+                while(coins.size()<targetOfflineCoins()) spawnLocalCoin();
+            }
             break;
         }
         for(int[] a:apples) if(a[0]==x&&a[1]==y) {
