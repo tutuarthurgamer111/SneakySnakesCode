@@ -20,14 +20,25 @@ public class MainActivity extends Activity {
     Switch secure;
     static final String SERVER_API = "https://server-list-orpin.vercel.app/api/servers";
     LinearLayout root;
+    NativeSocket shopSocket;
+    boolean shopVisible=false;
     static final String[] SKIN_IDS={"obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
     static final String[] SKIN_NAMES={"Obsidian","Lava","Ice Crystal","Midnight","Toxic","Rich","Snake Scale","Pixel Camo","Neon Grid","Galaxy","Fire","Tomatoes"};
     static final int[] SKIN_COSTS={150,200,200,120,300,300,350,400,400,500,500,1000};
     static final int[] SKIN_COLORS={0xff24243d,0xffd94b16,0xffb9eaff,0xff16165e,0xff50c832,0xffffdf45,0xff568c3c,0xff78885b,0xff00caca,0xff5422a0,0xffe07018,0xffed4620};
-    String equippedSkin(){return getPreferences(0).getString("equipped_skin","bright_green");}
-    int wallet(){return getPreferences(0).getInt("wallet_coins",0);}
-    void addCoins(int amount){if(amount>0)getPreferences(0).edit().putInt("wallet_coins",wallet()+amount).apply();}
-    boolean owns(String id){return getPreferences(0).getBoolean("owned_"+id,id.equals("bright_green")||id.equals("cocoa")||id.equals("bright_blue"));}
+    String equippedSkin(){return getPreferences(0).getString("server_equipped_skin","bright_blue");}
+    int wallet(){return getPreferences(0).getInt("server_coins",0);}
+    boolean owns(String id){
+        if(id.equals("bright_green")||id.equals("cocoa")||id.equals("bright_blue"))return true;
+        String data=getPreferences(0).getString("server_owned_skins","");
+        for(String owned:data.split("\\|"))if(owned.equals(id))return true;
+        return false;
+    }
+    void sendShopCommand(String type,String skin){
+        if(shopSocket==null)return;
+        try{JSONObject o=new JSONObject();o.put("type",type);if(skin!=null)o.put("skin",skin);shopSocket.send(o.toString());}
+        catch(Exception ignored){}
+    }
 
 
     @Override public void onCreate(Bundle b) {
@@ -162,7 +173,9 @@ public class MainActivity extends Activity {
         if(h.isEmpty()||h.contains(" ")||pn<1||pn>65535){
             Toast.makeText(this,"Confira o host e a porta (1–65535).",Toast.LENGTH_LONG).show();return;
         }
-        launchGame(playerName(),(secure.isChecked()?"wss://":"ws://")+h+":"+pn,false,"ONLINE");
+        String address=(secure.isChecked()?"wss://":"ws://")+h+":"+pn;
+        getPreferences(0).edit().putString("last_player_name",playerName()).putString("last_server_url",address).apply();
+        launchGame(playerName(),address,false,"ONLINE");
     }
 
     void randomOfficialServer(Button b) {
@@ -194,20 +207,57 @@ public class MainActivity extends Activity {
                 b.setEnabled(true);b.setText("ENTRAR EM SERVIDOR OFICIAL ALEATÓRIO");
                 if(selected==null){Toast.makeText(this,problem==null?"Nenhum servidor oficial disponível.":"Falha ao buscar: "+problem,Toast.LENGTH_LONG).show();return;}
                 String[] v=selected.split("\\|",2);
-                launchGame(playerName(),"ws://"+v[0]+":"+v[1],false,"ONLINE");
+                String address="ws://"+v[0]+":"+v[1];
+                getPreferences(0).edit().putString("last_player_name",playerName()).putString("last_server_url",address).apply();
+                launchGame(playerName(),address,false,"ONLINE");
             });
         },"official-server-list").start();
     }
 
     void showShop() {
-        base("LOJA DE SKINS","Compre e equipe visuais para sua cobra");
-        TextView balance=text("MOEDAS: "+wallet(),18,0xffffd45c);
-        balance.setTypeface(Typeface.DEFAULT_BOLD);
-        root.addView(balance,new LinearLayout.LayoutParams(-1,dp(42)));
+        shopVisible=true;
+        if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+        base("LOJA DE SKINS","Conectando à carteira do servidor...");
+        TextView loading=text("Carregando moedas...",15,0xffffd45c);
+        root.addView(loading,new LinearLayout.LayoutParams(-1,dp(42)));
+        String address=getPreferences(0).getString("last_server_url","");
+        String player=getPreferences(0).getString("last_player_name","Player");
+        if(address.isEmpty()){
+            loading.setText("Entre em um servidor online primeiro para carregar sua carteira.");
+            addButton("VOLTAR",false,()->showHome());
+            return;
+        }
+        shopSocket=new NativeSocket(address,msg->runOnUiThread(()->{
+            try{
+                JSONObject o=new JSONObject(msg);
+                String type=o.optString("type");
+                if(type.equals("profile")){
+                    int balance=Math.max(0,o.optInt("coins",0));
+                    JSONArray skins=o.optJSONArray("skins");
+                    StringBuilder owned=new StringBuilder();
+                    if(skins!=null)for(int i=0;i<skins.length();i++){if(owned.length()>0)owned.append("|");owned.append(skins.optString(i));}
+                    getPreferences(0).edit().putInt("server_coins",balance)
+                        .putString("server_owned_skins",owned.toString())
+                        .putString("server_equipped_skin",o.optString("equipped","bright_blue")).apply();
+                    if(shopVisible)renderShop();
+                }else if(type.equals("shop_result")){
+                    Toast.makeText(this,o.optString("message"),Toast.LENGTH_SHORT).show();
+                }
+            }catch(Exception ignored){}
+        }));
+        shopSocket.start();
+        try{
+            JSONObject join=new JSONObject();join.put("type","join");join.put("name",player);join.put("skin",equippedSkin());
+            shopSocket.send(join.toString());
+        }catch(Exception ignored){}
+    }
+
+    void renderShop(){
+        base("LOJA DE SKINS","Saldo online: "+wallet()+" moedas");
         ScrollView scroll=new ScrollView(this);
         LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);
         for(int i=0;i<SKIN_IDS.length;i++){
-            final int index=i; final String id=SKIN_IDS[i];
+            final String id=SKIN_IDS[i];
             LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(dp(10),dp(5),dp(10),dp(5));row.setBackground(shape(0xff101c2a,0xff263e54));
             LinearLayout.LayoutParams rowLp=new LinearLayout.LayoutParams(-1,dp(64));rowLp.bottomMargin=dp(7);list.addView(row,rowLp);
@@ -220,14 +270,11 @@ public class MainActivity extends Activity {
             boolean owned=owns(id);
             Button action=button(owned?(equippedSkin().equals(id)?"EQUIPADA":"EQUIPAR"):"COMPRAR",owned);
             row.addView(action,new LinearLayout.LayoutParams(dp(112),dp(42)));
-            action.setOnClickListener(v->{
-                if(owns(id)){getPreferences(0).edit().putString("equipped_skin",id).apply();showShop();}
-                else if(wallet()>=SKIN_COSTS[index]){getPreferences(0).edit().putInt("wallet_coins",wallet()-SKIN_COSTS[index]).putBoolean("owned_"+id,true).putString("equipped_skin",id).apply();Toast.makeText(this,"Skin comprada e equipada!",Toast.LENGTH_SHORT).show();showShop();}
-                else Toast.makeText(this,"Moedas insuficientes! Você tem "+wallet()+".",Toast.LENGTH_SHORT).show();
-            });
+            action.setOnClickListener(v->sendShopCommand(owned?"skin_equip":"shop_buy",id));
         }
         scroll.addView(list);LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,0,1);slp.topMargin=dp(6);root.addView(scroll,slp);
-        addButton("VOLTAR",false,()->showHome());
+        addButton("ATUALIZAR SALDO",false,()->sendShopCommand("profile",null));
+        addButton("VOLTAR",false,()->{shopVisible=false;if(shopSocket!=null){shopSocket.close();shopSocket=null;}showHome();});
     }
 
     void showSettings() {
@@ -249,6 +296,9 @@ public class MainActivity extends Activity {
     void startOffline(String mode){launchGame(playerName(),"",true,mode);}
     void launchGame(String n,String address,boolean offline,String mode){
         ((InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(root.getWindowToken(),0);
+        if(!offline)getPreferences(0).edit().putString("last_player_name",n).putString("last_server_url",address).apply();
+        shopVisible=false;
+        if(shopSocket!=null){shopSocket.close();shopSocket=null;}
         NativeAudio.stopMusic();game=new NativeGameView(this,n,address,offline,mode);setContentView(game);game.loop();
     }
 
@@ -256,5 +306,5 @@ public class MainActivity extends Activity {
         if(game!=null){game.close();game=null;NativeAudio.menuMusic();showHome();return;}
         showHome();
     }
-    @Override protected void onDestroy(){if(game!=null)game.close();NativeAudio.release();super.onDestroy();}
+    @Override protected void onDestroy(){if(game!=null)game.close();if(shopSocket!=null)shopSocket.close();NativeAudio.release();super.onDestroy();}
 }
