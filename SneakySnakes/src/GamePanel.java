@@ -19,7 +19,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         MouseListener, MouseMotionListener, MouseWheelListener {
 
     // -- Constants
-    public static final int WIDTH  = 800;
+    public static final int WIDTH  = 960;
     public static final int HEIGHT = 600;
     public static final int TILE   = 20;
     public static final int COLS   = WIDTH  / TILE;
@@ -450,7 +450,19 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        g.drawImage(buffer, 0, 0, getWidth(), getHeight(), null);
+        drawAspectFit(g, buffer);
+    }
+
+    private void drawAspectFit(Graphics graphics, BufferedImage image) {
+        Graphics2D g2 = (Graphics2D) graphics.create();
+        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
+        int drawW = (int) Math.round(WIDTH * scale);
+        int drawH = (int) Math.round(HEIGHT * scale);
+        int x = (getWidth() - drawW) / 2;
+        int y = (getHeight() - drawH) / 2;
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(image, x, y, drawW, drawH, null);
+        g2.dispose();
     }
 
     private void drawToBuffer() {
@@ -1109,9 +1121,16 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // ==========================================================
 
     private int[] scaleMouseCoords(int mx, int my) {
-        float scaleX = (float) WIDTH  / getWidth();
-        float scaleY = (float) HEIGHT / getHeight();
-        return new int[]{ (int)(mx * scaleX), (int)(my * scaleY) };
+        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
+        if (scale <= 0) return new int[]{-1, -1};
+        int drawW = (int) Math.round(WIDTH * scale);
+        int drawH = (int) Math.round(HEIGHT * scale);
+        int offsetX = (getWidth() - drawW) / 2;
+        int offsetY = (getHeight() - drawH) / 2;
+        return new int[]{
+            (int) ((mx - offsetX) / scale),
+            (int) ((my - offsetY) / scale)
+        };
     }
 
     // ==========================================================
