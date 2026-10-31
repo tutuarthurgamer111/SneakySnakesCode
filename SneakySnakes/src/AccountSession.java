@@ -10,6 +10,7 @@ import java.util.regex.*;
 public final class AccountSession {
     private static final Path TOKEN_FILE = Paths.get(System.getProperty("user.home"), ".sneakysnakes-session");
     private static volatile String token = loadToken();
+    private static volatile String lastServerUrl = "";
     private AccountSession() {}
 
     public static String token() { return token == null ? "" : token; }
@@ -134,6 +135,7 @@ public final class AccountSession {
     }
 
     public static boolean ensureLogin(Component parent, String serverUrl) {
+        lastServerUrl=serverUrl;
         if (!token().isEmpty()) return true;
         Object[] options={"Login","Create account","Play as guest","Cancel"};
         int choice=JOptionPane.showOptionDialog(parent,"Sign in to sync coins and skins between PC and Android.","SneakySnakes Account",
