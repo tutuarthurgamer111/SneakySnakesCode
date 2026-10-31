@@ -418,6 +418,7 @@ const id = nextId++;
                 if (fi >= 0) {
                     const food = foods[fi]; foods.splice(fi, 1);
                     player.score += ([10, 30, 80, 200][food.rarity] || 10);
+                    if (player.accountKey && accounts[player.accountKey] && player.score > (accounts[player.accountKey].highScore || 0)) { accounts[player.accountKey].highScore = player.score; saveAccounts(); }
                     ensureFoods(); broadcastFoods();
                 }
                 break;
