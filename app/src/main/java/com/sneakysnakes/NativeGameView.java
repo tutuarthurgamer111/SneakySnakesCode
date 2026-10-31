@@ -12,11 +12,11 @@ public class NativeGameView extends View {
     static final int TILE = 16;
     final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     NativeSocket net;
-    int world=64, id=-1, dx=1, dy=0, nx=1, ny=0, score=0, coinsN=0;
+    int world=64, id=-1, dx=1, dy=0, nx=1, ny=0, score=0, coinsN=0, applesN=0, xp=0, level=1, fps=0, frameCount=0;
     boolean connected=false, alive=true, sprint=false, offline=false, doublePoints=false;
     String mode="ONLINE", partyEvent="", status="Conectando...";
     int partyMoves=0, partyEventTicks=0;
-    long last=0;
+    long last=0, startedAt=System.currentTimeMillis(), fpsAt=System.currentTimeMillis();
     final ArrayList<int[]> snake=new ArrayList<>();
     final List<int[]> foods=new CopyOnWriteArrayList<>(), coins=new CopyOnWriteArrayList<>(), apples=new CopyOnWriteArrayList<>();
     final Map<Integer,Player> others=new ConcurrentHashMap<>();
@@ -119,7 +119,7 @@ public class NativeGameView extends View {
         for(int[] a:foods) if(a[0]==x&&a[1]==y) {
             int r=Math.min(3,Math.max(0,a[2]));
             grow=new int[]{1,3,8,20}[r];
-            score+=new int[]{10,30,80,200}[r]*(doublePoints?2:1);
+            score+=new int[]{10,30,80,200}[r]*(doublePoints?2:1); xp+=new int[]{5,15,40,100}[r];
             foods.remove(a); NativeAudio.play("eat"); break;
         }
         int[] tail=snake.get(snake.size()-1);
@@ -137,7 +137,7 @@ public class NativeGameView extends View {
             break;
         }
         for(int[] a:apples) if(a[0]==x&&a[1]==y) {
-            apples.remove(a); score+=50; NativeAudio.play("eat");
+            apples.remove(a); score+=50; applesN++; xp+=25; NativeAudio.play("eat");
             if(!offline)send("{\"type\":\"apple_collect\",\"x\":"+x+",\"y\":"+y+"}");
             else spawnLocalApple();
             break;
@@ -202,12 +202,52 @@ public class NativeGameView extends View {
         for(int[] a:apples)cell(c,ox,oy,z,a[0],a[1],0xffef4545);
         for(Player q:others.values())if(q.alive)for(int[] a:q.body)cell(c,ox,oy,z,a[0],a[1],0xffd18a4c);
         for(int i=snake.size()-1;i>=0;i--)cell(c,ox,oy,z,snake.get(i)[0],snake.get(i)[1],i==0?0xff7ce3ff:0xff269bc7);
-        p.setColor(0xcc071321);c.drawRoundRect(10,10,Math.min(w-10,340),96,12,12,p);
-        label(c,"SNEAKYSNAKES • "+status,Math.min(w/2,175),34,14,-1);
-        label(c,mode+(partyEvent.isEmpty()?"":" • "+partyEvent),Math.min(w/2,175),57,12,0xffffd66b);
-        label(c,"Pontos: "+score+"  Moedas: "+coinsN+"  Mapa: "+world+"x"+world,Math.min(w/2,175),80,11,0xff91dfff);
+        drawHud(c,w,h);
         controls(c,w,h);
         if(!alive){p.setColor(0xaa000000);c.drawRect(0,0,w,h,p);label(c,status,w/2,h/2,30,status.contains("VITÓRIA")?0xffffd45c:-1);}
+    }
+
+    void drawHud(Canvas c,float w,float h) {
+        float d=getResources().getDisplayMetrics().density;
+        float left=8*d, top=8*d, panelW=195*d, panelH=185*d;
+        p.setColor(0xc80a0e1e); c.drawRoundRect(left,top,left+panelW,top+panelH,12*d,12*d,p);
+        p.setColor(0x3264a0ff); p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(d);
+        c.drawRoundRect(left,top,left+panelW,top+panelH,12*d,12*d,p); p.setStyle(Paint.Style.FILL);
+        String[] lines={
+            "Score:   "+score,
+            "Level:   "+level,
+            "Combo:   x1",
+            "Coins:   "+coinsN,
+            "Apples:  "+applesN,
+            "Server Est: "+((System.currentTimeMillis()-startedAt)/1000)+"s",
+            "Players: "+(others.size()+1),
+            "Sprint:  "+(sprint?"ON":"OFF"),
+            "FPS:     "+fps
+        };
+        for(int i=0;i<lines.length;i++) {
+            p.setTextAlign(Paint.Align.LEFT); p.setTypeface(Typeface.create("Arial",Typeface.BOLD));
+            p.setTextSize(13*d); p.setColor(i==0?Color.WHITE:0xffb4dcff);
+            c.drawText(lines[i],18*d,28*d+i*19*d,p);
+        }
+        p.setColor(0xb4141428); c.drawRoundRect(left,h-20*d,left+panelW,h-8*d,6*d,6*d,p);
+        float progress=Math.min(1f,(float)xp/Math.max(1,level*100));
+        p.setColor(0xff50c8ff); c.drawRoundRect(left,h-20*d,left+panelW*progress,h-8*d,6*d,6*d,p);
+        p.setColor(0x6464b4ff); p.setStyle(Paint.Style.STROKE);
+        c.drawRoundRect(left,h-20*d,left+panelW,h-8*d,6*d,6*d,p); p.setStyle(Paint.Style.FILL);
+        p.setTextSize(9*d); p.setTypeface(Typeface.DEFAULT_BOLD); p.setColor(Color.WHITE);
+        p.setTextAlign(Paint.Align.LEFT); c.drawText("XP",left+4*d,h-11*d,p);
+
+        p.setTextSize(11*d); p.setTypeface(Typeface.DEFAULT); p.setColor(0xff8cc8ff);
+        p.setTextAlign(Paint.Align.RIGHT); c.drawText("☀ DAY",w-12*d,22*d,p);
+        if(!status.isEmpty()) {
+            p.setTextAlign(Paint.Align.LEFT); p.setTextSize(11*d);
+            p.setColor(connected?0xc864ff78:0xc8ff7850);
+            c.drawText(status,8*d,h-28*d,p);
+        }
+        if(!partyEvent.isEmpty()) {
+            p.setTextAlign(Paint.Align.CENTER); p.setTextSize(14*d); p.setTypeface(Typeface.DEFAULT_BOLD);
+            p.setColor(0xffffdc64); c.drawText(partyEvent,w/2,top+panelH+24*d,p);
+        }
     }
 
     void cell(Canvas c,float ox,float oy,float z,int x,int y,int color) {
