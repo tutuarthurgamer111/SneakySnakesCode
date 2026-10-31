@@ -23,6 +23,7 @@ public class MainActivity extends Activity {
     NativeSocket shopSocket;
     EditText accountUser, accountPass, accountNick;
     boolean shopVisible=false;
+    boolean resolvingAccountServer=false;
     // Shared catalog: identical IDs, score unlocks and coin prices to the PC version.
     static final String[] SKIN_IDS={"cocoa","bright_blue","lilac","hurricane","violet","bright_red","bright_green","yeller","really_blue","really_red","gold","neon_green","neon_pink","neon_blue","rainbow","obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
     static final String[] SKIN_NAMES={"Cocoa","Blue","Lilac","Grey","Violet","Red","Green","Yellow","Bright Blue","Bright Red","Gold","Classic","Neon Pink","Neon Blue","Rainbow","Obsidian","Lava","Ice Crystal","Midnight","Toxic","Rich","Snake Scale","Pixel Camo","Neon Grid","Galaxy","Fire","Tomatoes"};
@@ -285,7 +286,8 @@ public class MainActivity extends Activity {
     }
     void deleteAccountRemote(String password){
         String url=getPreferences(0).getString("last_server_url",""),token=getPreferences(0).getString("account_token","");
-        if(!url.startsWith("wss://")||token.isEmpty()){Toast.makeText(this,"Conecte-se a um servidor seguro e entre na conta.",Toast.LENGTH_LONG).show();return;}
+        if(!url.startsWith("wss://")){ensureOfficialAccountServer(()->deleteAccountRemote(password));return;}
+        if(token.isEmpty()){Toast.makeText(this,"Entre na conta antes de excluí-la.",Toast.LENGTH_LONG).show();return;}
         if(shopSocket!=null)shopSocket.close();final boolean[] sent={false};
         shopSocket=new NativeSocket(url,raw->{try{JSONObject response=new JSONObject(raw);String type=response.optString("type");
             if(type.equals("auth_resumed")&&!sent[0]){sent[0]=true;JSONObject request=new JSONObject();request.put("type","auth_delete");request.put("password",password);shopSocket.send(request.toString());}
@@ -295,10 +297,49 @@ public class MainActivity extends Activity {
         shopSocket.start();try{JSONObject auth=new JSONObject();auth.put("type","auth_resume");auth.put("token",token);shopSocket.send(auth.toString());}catch(Exception e){shopSocket.close();shopSocket=null;}
     }
 
+    void ensureOfficialAccountServer(Runnable ready) {
+        if(resolvingAccountServer)return;
+        resolvingAccountServer=true;
+        Toast.makeText(this,"Localizando servidor oficial seguro...",Toast.LENGTH_SHORT).show();
+        new Thread(()->{
+            String selected=null; String error=null; HttpURLConnection connection=null;
+            try {
+                connection=(HttpURLConnection)new URL(SERVER_API).openConnection();
+                connection.setConnectTimeout(12000);connection.setReadTimeout(20000);
+                connection.setRequestProperty("Accept","application/json");
+                int status=connection.getResponseCode();
+                if(status!=200)throw new IOException("HTTP "+status);
+                StringBuilder body=new StringBuilder();
+                try(BufferedReader reader=new BufferedReader(new InputStreamReader(connection.getInputStream(),"UTF-8"))){
+                    String line;while((line=reader.readLine())!=null)body.append(line);
+                }
+                JSONObject json=new JSONObject(body.toString());
+                JSONArray servers=json.optJSONArray("servers");
+                if(servers!=null)for(int i=0;i<servers.length();i++){
+                    JSONObject server=servers.optJSONObject(i);if(server==null)continue;
+                    String host=server.optString("host","").trim();int port=server.optInt("port",3000);
+                    boolean secure=server.optBoolean("secure",false)||port==443;
+                    if(secure&&!host.isEmpty()&&!host.contains("/")&&!host.contains(":")&&port>0&&port<=65535){
+                        selected="wss://"+host+":"+port;break;
+                    }
+                }
+                if(selected==null)throw new IOException("Nenhum servidor WSS disponível.");
+            }catch(Exception e){error=e.getMessage();}
+            finally{if(connection!=null)connection.disconnect();}
+            final String address=selected,problem=error;
+            runOnUiThread(()->{
+                resolvingAccountServer=false;
+                if(address==null){Toast.makeText(this,"Não foi possível localizar o servidor oficial: "+problem,Toast.LENGTH_LONG).show();return;}
+                getPreferences(0).edit().putString("last_server_url",address).apply();
+                ready.run();
+            });
+        },"official-account-server").start();
+    }
+
     void sendAccountAuth(boolean register) {
         String url=getPreferences(0).getString("last_server_url","");
         if(!url.startsWith("wss://")) {
-            Toast.makeText(this,"Conecte primeiro a um servidor seguro (WSS).",Toast.LENGTH_LONG).show();return;
+            ensureOfficialAccountServer(()->sendAccountAuth(register));return;
         }
         String username=accountUser.getText().toString().trim();
         String password=accountPass.getText().toString();
