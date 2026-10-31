@@ -20,6 +20,15 @@ public class MainActivity extends Activity {
     Switch secure;
     static final String SERVER_API = "https://sneakysnakes-server-list.vercel.app/servers";
     LinearLayout root;
+    static final String[] SKIN_IDS={"obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
+    static final String[] SKIN_NAMES={"Obsidian","Lava","Ice Crystal","Midnight","Toxic","Rich","Snake Scale","Pixel Camo","Neon Grid","Galaxy","Fire","Tomatoes"};
+    static final int[] SKIN_COSTS={150,200,200,120,300,300,350,400,400,500,500,1000};
+    static final int[] SKIN_COLORS={0xff24243d,0xffd94b16,0xffb9eaff,0xff16165e,0xff50c832,0xffffdf45,0xff568c3c,0xff78885b,0xff00caca,0xff5422a0,0xffe07018,0xffed4620};
+    String equippedSkin(){return getPreferences(0).getString("equipped_skin","bright_green");}
+    int wallet(){return getPreferences(0).getInt("wallet_coins",0);}
+    void addCoins(int amount){if(amount>0)getPreferences(0).edit().putInt("wallet_coins",wallet()+amount).apply();}
+    boolean owns(String id){return getPreferences(0).getBoolean("owned_"+id,id.equals("bright_green")||id.equals("cocoa")||id.equals("bright_blue"));}
+
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -88,6 +97,7 @@ public class MainActivity extends Activity {
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(32)));
         addButton("JOGAR",true,()->showPlayMenu());
+        addButton("LOJA DE SKINS",false,()->showShop());
         addButton("CONFIGURAÇÕES",false,()->showSettings());
         root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(18)));
         root.addView(text("ANDROID NATIVO  •  SNEAKYSNAKES",11,0xff71879b),new LinearLayout.LayoutParams(-1,dp(30)));
@@ -183,6 +193,37 @@ public class MainActivity extends Activity {
                 launchGame(playerName(),"ws://"+v[0]+":"+v[1],false,"ONLINE");
             });
         },"official-server-list").start();
+    }
+
+    void showShop() {
+        base("LOJA DE SKINS","Compre e equipe visuais para sua cobra");
+        TextView balance=text("MOEDAS: "+wallet(),18,0xffffd45c);
+        balance.setTypeface(Typeface.DEFAULT_BOLD);
+        root.addView(balance,new LinearLayout.LayoutParams(-1,dp(42)));
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);
+        for(int i=0;i<SKIN_IDS.length;i++){
+            final int index=i; final String id=SKIN_IDS[i];
+            LinearLayout row=new LinearLayout(this);row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(10),dp(5),dp(10),dp(5));row.setBackground(shape(0xff101c2a,0xff263e54));
+            LinearLayout.LayoutParams rowLp=new LinearLayout.LayoutParams(-1,dp(64));rowLp.bottomMargin=dp(7);list.addView(row,rowLp);
+            View preview=new View(this);preview.setBackground(shape(SKIN_COLORS[i],0xffa9c9df));
+            LinearLayout.LayoutParams prevLp=new LinearLayout.LayoutParams(dp(38),dp(38));prevLp.rightMargin=dp(10);row.addView(preview,prevLp);
+            LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);
+            TextView nm=text(SKIN_NAMES[i],14,Color.WHITE);nm.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
+            TextView price=text(SKIN_COSTS[i]+" moedas",11,0xffffd45c);price.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
+            info.addView(nm);info.addView(price);row.addView(info,new LinearLayout.LayoutParams(0,-1,1));
+            boolean owned=owns(id);
+            Button action=button(owned?(equippedSkin().equals(id)?"EQUIPADA":"EQUIPAR"):"COMPRAR",owned);
+            row.addView(action,new LinearLayout.LayoutParams(dp(112),dp(42)));
+            action.setOnClickListener(v->{
+                if(owns(id)){getPreferences(0).edit().putString("equipped_skin",id).apply();showShop();}
+                else if(wallet()>=SKIN_COSTS[index]){getPreferences(0).edit().putInt("wallet_coins",wallet()-SKIN_COSTS[index]).putBoolean("owned_"+id,true).putString("equipped_skin",id).apply();Toast.makeText(this,"Skin comprada e equipada!",Toast.LENGTH_SHORT).show();showShop();}
+                else Toast.makeText(this,"Moedas insuficientes! Você tem "+wallet()+".",Toast.LENGTH_SHORT).show();
+            });
+        }
+        scroll.addView(list);LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,0,1);slp.topMargin=dp(6);root.addView(scroll,slp);
+        addButton("VOLTAR",false,()->showHome());
     }
 
     void showSettings() {
