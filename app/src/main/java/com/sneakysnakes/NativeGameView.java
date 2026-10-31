@@ -200,7 +200,7 @@ public class NativeGameView extends View {
                     Activity activity=(Activity)getContext();
                     android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
                     int balance=Math.max(0,prefs.getInt("server_coins",0));
-                    prefs.edit().putInt("server_coins",balance+1).apply();
+                    prefs.edit().putInt("server_coins",balance+3).apply();
                 }
             } else { while(coins.size()<targetOfflineCoins()) spawnLocalCoin(); }
             break;
