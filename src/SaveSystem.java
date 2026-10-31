@@ -7,7 +7,7 @@ import java.util.Scanner;
  */
 public class SaveSystem {
 
-    public static final String SAVE_PATH = "./data/c4ca4238a0b923820dcc509a6f75849b.json";
+    public static final String SAVE_PATH = AppPaths.dataFile("c4ca4238a0b923820dcc509a6f75849b.json").getAbsolutePath();
 
     public int    highScore      = 0;
     public int    gamesPlayed    = 0;
@@ -48,7 +48,7 @@ public class SaveSystem {
 
     public void save() {
         try {
-            File folder = new File("./data");
+            File folder = AppPaths.dataDirectory();
             if (!folder.exists()) folder.mkdirs();
             PrintWriter w = new PrintWriter(new FileWriter(SAVE_PATH));
             w.println("{");
