@@ -8,6 +8,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebSettings;
 
 public class MainActivity extends Activity {
     private WebView game;
@@ -31,12 +32,14 @@ public class MainActivity extends Activity {
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
 
         setContentView(game);
-        game.loadUrl("file:///android_asset/game.html");
+        game.loadUrl("file:///android_asset/mobile.html");
     }
 
     private void hideSystemUi() {
