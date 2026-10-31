@@ -415,7 +415,6 @@ public class NativeGameView extends View {
             case "really_red": return 0xffff0000;
             case "gold": return 0xffc89600;
             case "neon_green": return 0xff00ea00;
-            case "neon_green": return 0xff00ea00;
             case "neon_pink": return 0xffff0096;
             case "neon_blue": return 0xff0096ff;
             case "obsidian": return 0xff141423;
