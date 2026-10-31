@@ -192,4 +192,46 @@ public final class AccountSession {
         else JOptionPane.showMessageDialog(parent,"Account signed in. Your profile will sync when the game connects.","Account",JOptionPane.INFORMATION_MESSAGE);
         return true;
     }
+
+    public static void manageAccount(Component parent, String serverUrl) {
+        lastServerUrl = serverUrl == null ? "" : serverUrl.trim();
+        if (!lastServerUrl.startsWith("wss://")) {
+            JOptionPane.showMessageDialog(parent, "A conta precisa de um servidor seguro (WSS).",
+                "Conexão segura necessária", JOptionPane.WARNING_MESSAGE); return;
+        }
+        if (token().isEmpty()) { ensureLogin(parent, lastServerUrl); return; }
+        Object[] options = {"Excluir conta", "Sair da conta", "Cancelar"};
+        int choice = JOptionPane.showOptionDialog(parent, "Conta conectada. O que deseja fazer?",
+            "Conta SneakySnakes", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[2]);
+        if (choice == 1) { clearToken(); JOptionPane.showMessageDialog(parent, "Você saiu da conta neste computador."); return; }
+        if (choice != 0) return;
+        if (JOptionPane.showConfirmDialog(parent, "A conta será excluída permanentemente. Deseja continuar?",
+            "Primeira confirmação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
+        if (JOptionPane.showConfirmDialog(parent, "Todos os dados, moedas e skins desta conta serão perdidos. Tem certeza?",
+            "Última confirmação", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE) != JOptionPane.YES_OPTION) return;
+        JPasswordField password = new JPasswordField(18);
+        if (JOptionPane.showConfirmDialog(parent, password, "Digite a senha da conta para confirmar",
+            JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) return;
+        String pass = new String(password.getPassword());
+        if (pass.isEmpty()) { JOptionPane.showMessageDialog(parent, "A senha é obrigatória."); return; }
+        if (deleteRemoteAccount(lastServerUrl, pass)) { clearToken(); JOptionPane.showMessageDialog(parent, "Conta excluída permanentemente."); }
+    }
+    private static boolean deleteRemoteAccount(String serverUrl, String password) {
+        String currentToken = token(); if (currentToken.isEmpty()) return false;
+        CountDownLatch done = new CountDownLatch(1); boolean[] success = {false}; String[] error = {null};
+        final WebSocketClient[] client = new WebSocketClient[1];
+        client[0] = new WebSocketClient(serverUrl, message -> {
+            String type = jsonString(message, "type");
+            if ("auth_resumed".equals(type)) client[0].send("{\\"type\\":\\"auth_delete\\",\\"password\\":\\""+jsonEscape(password)+"\\"}");
+            else if ("account_deleted".equals(type)) { success[0] = true; done.countDown(); }
+            else if ("auth_error".equals(type) || "account_error".equals(type)) { error[0] = jsonString(message, "code"); done.countDown(); }
+        }, () -> client[0].send("{\\"type\\":\\"auth_resume\\",\\"token\\":\\""+jsonEscape(currentToken)+"\\"}"), () -> done.countDown());
+        new Thread(client[0], "sneakysnakes-account-delete").start();
+        try { if (!done.await(15, TimeUnit.SECONDS)) error[0] = "CONNECTION_TIMEOUT"; }
+        catch (InterruptedException e) { Thread.currentThread().interrupt(); error[0] = "INTERRUPTED"; }
+        finally { client[0].close(); }
+        if (!success[0]) JOptionPane.showMessageDialog(null, "Não foi possível excluir a conta: "+
+            (error[0] == null ? "SERVER_DISCONNECTED" : error[0]), "Erro ao excluir conta", JOptionPane.ERROR_MESSAGE);
+        return success[0];
+    }
 }
