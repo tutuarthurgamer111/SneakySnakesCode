@@ -54,7 +54,7 @@ jobs:
       - name: Package EXE installer
         shell: pwsh
         run: |
-          jpackage --type app-image --name SneakySnakes --app-version 3.0.0 --input build --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/installer --win-menu --win-shortcut --vendor "SneakySnakes"
+          jpackage --type app-image --name SneakySnakes --app-version 3.0.0 --input build --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/installer --vendor "SneakySnakes"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload Windows app (EXE launcher)
         uses: actions/upload-artifact@v4
