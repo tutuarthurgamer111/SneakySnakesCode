@@ -39,14 +39,17 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Compile desktop game
+      - name: Install WiX Toolset for jpackage
+        shell: pwsh
+        run: choco install wixtoolset --version=3.14.1 -y --no-progress
+      - name: Compile desktop game and prepare resources
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force build/classes | Out-Null
+          New-Item -ItemType Directory -Force build/classes, build/SneakySnakes | Out-Null
           $files = Get-ChildItem src -Filter *.java -File | ForEach-Object { $_.FullName }
           javac -encoding UTF-8 -d build/classes $files
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item -Recurse SneakySnakes/Resources build/classes/SneakySnakes/
+          Copy-Item -Recurse SneakySnakes/Resources build/SneakySnakes/
           jar --create --file build/SneakySnakes.jar --main-class SneakySnakes -C build/classes .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package EXE installer
