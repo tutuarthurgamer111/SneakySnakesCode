@@ -65,7 +65,7 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
   windows:
-    name: Build Windows EXE
+    name: Build Windows single-file installer
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Compile desktop game and prepare resources
+      - name: Compile desktop game
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force build/classes, build/package-input | Out-Null
@@ -82,16 +82,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           jar --create --file build/package-input/SneakySnakes.jar --main-class SneakySnakes -C build/classes .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Package EXE installer
+      - name: Build self-contained Windows app image
         shell: pwsh
         run: |
-          jpackage --type app-image --name SneakySnakes --app-version 3.0.0 --input build/package-input --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/installer --vendor "SneakySnakes"
+          jpackage --type app-image --name SneakySnakes --app-version 4.0.3 --input build/package-input --main-jar SneakySnakes.jar --main-class SneakySnakes --dest build/image --vendor "SneakySnakes"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          New-Item -ItemType Directory -Force build/installer/SneakySnakes/SneakySnakes | Out-Null
-          Copy-Item -Recurse SneakySnakes/Resources build/installer/SneakySnakes/SneakySnakes/
-          Copy-Item -Recurse data build/installer/SneakySnakes/
-      - name: Upload Windows app (EXE launcher)
+          New-Item -ItemType Directory -Force build/image/SneakySnakes/SneakySnakes | Out-Null
+          Copy-Item -Recurse SneakySnakes/Resources build/image/SneakySnakes/SneakySnakes/
+      - name: Create one-file Windows installer
+        shell: pwsh
+        run: |
+          jpackage --type exe --app-image build/image/SneakySnakes --name SneakySnakes --app-version 4.0.3 --dest build/installer --vendor "SneakySnakes" --win-per-user-install --win-menu --win-shortcut
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload single Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: SneakySnakes-Windows-EXE
-          path: build/installer/SneakySnakes/
+          name: SneakySnakes-Windows-Installer
+          path: build/installer/SneakySnakes-4.0.3.exe
+          if-no-files-found: error
