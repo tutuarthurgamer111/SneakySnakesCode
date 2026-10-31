@@ -32,6 +32,16 @@ jobs:
           for file in background track1 track2 track3 track4 click eat hit; do
             ffmpeg -y -i "SneakySnakes/Resources/content/sounds/${file}.wav" -vn -codec:a libmp3lame -b:a 112k "app/src/main/assets/audio/${file}.mp3"
           done
+      - name: Prepare Android launcher icon from favicon.ico
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
+          convert "SneakySnakes/Resources/favicon.ico[0]" -background none -resize 48x48 app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert "SneakySnakes/Resources/favicon.ico[0]" -background none -resize 72x72 app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert "SneakySnakes/Resources/favicon.ico[0]" -background none -resize 96x96 app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert "SneakySnakes/Resources/favicon.ico[0]" -background none -resize 144x144 app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert "SneakySnakes/Resources/favicon.ico[0]" -background none -resize 192x192 app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
       - name: Build APK
         run: gradle --no-daemon assembleDebug
       - name: Upload APK
