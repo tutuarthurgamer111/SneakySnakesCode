@@ -259,24 +259,44 @@ public class NativeGameView extends View {
         p.setColor(color);p.setTextSize(size);p.setTypeface(Typeface.DEFAULT_BOLD);p.setTextAlign(Paint.Align.CENTER);c.drawText(s,x,y,p);
     }
     void controls(Canvas c,float w,float h) {
-        p.setColor(0x88345f82);c.drawCircle(82,h-86,70,p);
-        label(c,"▲",82,h-126,28,-1);label(c,"▼",82,h-37,28,-1);
-        label(c,"◀",40,h-81,28,-1);label(c,"▶",124,h-81,28,-1);
-        p.setColor(0xbb9b5b25);c.drawCircle(w-72,h-76,55,p);
-        label(c,sprint?"SPRINT":"CORRER",w-72,h-71,14,-1);
+        float d=getResources().getDisplayMetrics().density;
+        float joyX=104*d, joyY=h-112*d, joyR=86*d;
+        float runX=w-100*d, runY=h-105*d, runR=68*d;
+
+        p.setColor(0x88345f82);
+        c.drawCircle(joyX,joyY,joyR,p);
+        p.setColor(0x665f9bc2);
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(2*d);
+        c.drawCircle(joyX,joyY,joyR-5*d,p); p.setStyle(Paint.Style.FILL);
+        label(c,"▲",joyX,joyY-43*d,34*d,-1);
+        label(c,"▼",joyX,joyY+58*d,34*d,-1);
+        label(c,"◀",joyX-53*d,joyY+10*d,34*d,-1);
+        label(c,"▶",joyX+53*d,joyY+10*d,34*d,-1);
+
+        p.setColor(0xbb9b5b25);
+        c.drawCircle(runX,runY,runR,p);
+        p.setColor(0x88e4a35d);
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(2*d);
+        c.drawCircle(runX,runY,runR-5*d,p); p.setStyle(Paint.Style.FILL);
+        label(c,sprint?"SPRINT":"CORRER",runX,runY+6*d,17*d,-1);
     }
     @Override public boolean onTouchEvent(MotionEvent e) {
         float x=e.getX(),y=e.getY(),w=getWidth(),h=getHeight();
+        float d=getResources().getDisplayMetrics().density;
+        float joyX=104*d, joyY=h-112*d, joyR=86*d;
+        float runX=w-100*d, runY=h-105*d, runR=68*d;
         if(e.getAction()==MotionEvent.ACTION_DOWN||e.getAction()==MotionEvent.ACTION_MOVE) {
-            if(x>w-145&&y>h-145)sprint=true;
-            else if(x<165&&y>h-170) {
-                float a=x-82,b=y-(h-86);
+            float joyDist=(float)Math.hypot(x-joyX,y-joyY);
+            float runDist=(float)Math.hypot(x-runX,y-runY);
+            if(runDist<=runR+18*d) sprint=true;
+            else if(joyDist<=joyR+22*d) {
+                float a=x-joyX,b=y-joyY;
                 if(Math.abs(a)>Math.abs(b)) {
-                    if(a< -14&&dx!=1){nx=-1;ny=0;}
-                    else if(a>14&&dx!=-1){nx=1;ny=0;}
+                    if(a< -18*d&&dx!=1){nx=-1;ny=0;}
+                    else if(a>18*d&&dx!=-1){nx=1;ny=0;}
                 } else {
-                    if(b< -14&&dy!=1){nx=0;ny=-1;}
-                    else if(b>14&&dy!=-1){nx=0;ny=1;}
+                    if(b< -18*d&&dy!=1){nx=0;ny=-1;}
+                    else if(b>18*d&&dy!=-1){nx=0;ny=1;}
                 }
             }
             invalidate();return true;
