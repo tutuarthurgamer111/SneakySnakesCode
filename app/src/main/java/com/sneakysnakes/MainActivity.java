@@ -5,6 +5,7 @@ import android.os.*;
 import android.view.*;
 import android.widget.*;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import org.json.*;
 import java.net.*;
 import java.io.*;
@@ -32,7 +33,21 @@ public class MainActivity extends Activity {
     }
 
     Button button(String value) {
-        Button b = new Button(this); b.setText(value); b.setAllCaps(false);
+        Button b = new Button(this);
+        b.setText(value);
+        b.setAllCaps(false);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(14);
+        b.setGravity(Gravity.CENTER);
+        b.setPadding(12, 4, 12, 4);
+        b.setMinHeight(44);
+        b.setMinimumHeight(44);
+        b.setIncludeFontPadding(false);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(0xff18334d);
+        bg.setCornerRadius(12 * getResources().getDisplayMetrics().density);
+        bg.setStroke((int)(1 * getResources().getDisplayMetrics().density), 0xff3c7298);
+        b.setBackground(bg);
         b.setOnTouchListener((view,event) -> { if(event.getAction()==MotionEvent.ACTION_DOWN) NativeAudio.play("click"); return false; });
         return b;
     }
