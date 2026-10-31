@@ -76,8 +76,8 @@ public class MainActivity extends Activity {
         if(title!=null) {
             TextView heading=text(title,19,0xffe8f4ff);
             heading.setTypeface(Typeface.DEFAULT_BOLD);
-            LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(42));
-            hp.topMargin=dp(12); root.addView(heading,hp);
+            LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(34));
+            hp.topMargin=dp(5); root.addView(heading,hp);
         }
         if(subtitle!=null) {
             TextView sub=text(subtitle,12,0xff8fa9bf);
@@ -88,8 +88,8 @@ public class MainActivity extends Activity {
 
     void addButton(String label,boolean primary,Runnable action) {
         Button b=button(label,primary);
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(50));
-        lp.topMargin=dp(9); root.addView(b,lp); b.setOnClickListener(v->action.run());
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(42));
+        lp.topMargin=dp(5); root.addView(b,lp); b.setOnClickListener(v->action.run());
     }
 
     void showHome() {
@@ -131,7 +131,7 @@ public class MainActivity extends Activity {
         name=edit("Seu nome","Player",false);
         LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,dp(48)); np.topMargin=dp(6); root.addView(name,np);
         TextView divider=text("SERVIDOR OFICIAL",12,0xff83a9c5);
-        LinearLayout.LayoutParams dp1=new LinearLayout.LayoutParams(-1,dp(30)); dp1.topMargin=dp(7); root.addView(divider,dp1);
+        LinearLayout.LayoutParams dp1=new LinearLayout.LayoutParams(-1,dp(22)); dp1.topMargin=dp(7); root.addView(divider,dp1);
         Button random=button("ENTRAR EM SERVIDOR OFICIAL ALEATÓRIO",true);
         LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dp(48)); root.addView(random,rp);
         random.setOnClickListener(v->randomOfficialServer(random));
