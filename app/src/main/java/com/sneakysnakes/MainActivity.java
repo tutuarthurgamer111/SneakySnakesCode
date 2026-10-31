@@ -52,6 +52,13 @@ public class MainActivity extends Activity {
         return b;
     }
 
+    void addMenuButton(LinearLayout parent, Button b, int heightDp) {
+        int d = (int)(getResources().getDisplayMetrics().density + 0.5f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, heightDp * d);
+        lp.setMargins(0, 5 * d, 0, 5 * d);
+        parent.addView(b, lp);
+    }
+
     void menu() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL); root.setGravity(Gravity.CENTER);
@@ -77,25 +84,25 @@ public class MainActivity extends Activity {
         content.addView(secure, new LinearLayout.LayoutParams(-1, 42));
 
         Button random = button("🎲 Entrar em servidor oficial aleatório");
-        content.addView(random, new LinearLayout.LayoutParams(-1, 48));
+        addMenuButton(content, random, 54);
         random.setOnClickListener(v -> randomOfficialServer(random));
         Button connect = button("CONECTAR ONLINE");
-        content.addView(connect, new LinearLayout.LayoutParams(-1, 48));
+        addMenuButton(content, connect, 54);
         connect.setOnClickListener(v -> startOnline());
 
         content.addView(label("MODOS OFFLINE", 17), new LinearLayout.LayoutParams(-1, 42));
         Button classic = button("CLASSIC MODE");
         Button party = button("PARTY MODE");
         Button infinite = button("INFINITE MODE");
-        content.addView(classic, new LinearLayout.LayoutParams(-1, 44));
-        content.addView(party, new LinearLayout.LayoutParams(-1, 44));
-        content.addView(infinite, new LinearLayout.LayoutParams(-1, 44));
+        addMenuButton(content, classic, 52);
+        addMenuButton(content, party, 52);
+        addMenuButton(content, infinite, 52);
         classic.setOnClickListener(v -> startOffline("CLASSIC"));
         party.setOnClickListener(v -> startOffline("PARTY"));
         infinite.setOnClickListener(v -> startOffline("INFINITE"));
 
         Button sound = button(NativeAudio.isEnabled() ? "🔊 Sons: ligados" : "🔇 Sons: desligados");
-        content.addView(sound, new LinearLayout.LayoutParams(-1, 42));
+        addMenuButton(content, sound, 50);
         sound.setOnClickListener(v -> {
             NativeAudio.setEnabled(!NativeAudio.isEnabled());
             sound.setText(NativeAudio.isEnabled() ? "🔊 Sons: ligados" : "🔇 Sons: desligados");
