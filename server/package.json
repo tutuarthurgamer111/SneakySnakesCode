@@ -1,0 +1,15 @@
+{
+  "name": "sneakysnakes-server",
+  "version": "1.0.0",
+  "description": "SneakySnakes multiplayer server",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^1.7.0",
+    "axios": "^1.16.1",
+    "ws": "^8.21.0"
+  }
+}
