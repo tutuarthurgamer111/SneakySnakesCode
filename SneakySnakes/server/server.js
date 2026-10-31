@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const readline = require('readline');
 
 const args = process.argv.slice(2);
 let port = 3000;
@@ -43,6 +44,26 @@ let heartbeatInterval = null;
 let ngrokListener = null;
 
 const players = new Map();
+const DATA_DIR = path.join(__dirname, 'data');
+const ACCOUNTS_FILE = path.join(DATA_DIR, 'players.json');
+let accounts = {};
+try { if (fs.existsSync(ACCOUNTS_FILE)) accounts = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8')) || {}; }
+catch (err) { console.error('[Accounts] Failed to load accounts:', err.message); accounts = {}; }
+function saveAccounts() {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const temp = ACCOUNTS_FILE + '.tmp';
+    fs.writeFileSync(temp, JSON.stringify(accounts, null, 2), 'utf8');
+    fs.renameSync(temp, ACCOUNTS_FILE);
+}
+function validUuid(value) {
+    return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+function sendProfile(player) {
+    if (!player.account) return;
+    send(player.ws, { type: 'profile', coins: player.account.coins,
+        unlockedSkins: player.account.unlockedSkins || '',
+        currentSkinId: player.account.currentSkinId || 'bright_green' });
+}
 const foods   = [];
 const coins   = [];
 const apples = []; 
@@ -64,8 +85,19 @@ function getUptime() {
     return `Server Est: ${parts.join(' ')}`;
 }
 
+function randomFreeTile() {
+    for (let i = 0; i < 500; i++) {
+        const p = randomTile();
+        const used = foods.some(v => v.x === p.x && v.y === p.y) ||
+            coins.some(v => v.x === p.x && v.y === p.y) ||
+            apples.some(v => v.x === p.x && v.y === p.y) ||
+            [...players.values()].some(v => v.alive && v.body.some(seg => seg[0] === p.x && seg[1] === p.y));
+        if (!used) return p;
+    }
+    return randomTile();
+}
 function spawnApple() {
-    const { x, y } = randomTile();
+    const { x, y } = randomFreeTile();
     apples.push({ x, y });
 }
 
@@ -241,6 +273,39 @@ const id = nextId++;
             case 'join': {
                 player.name = String(msg.name || ('Player' + id)).substring(0, 24);
                 player.skin = String(msg.skin || 'bright_blue').substring(0, 40);
+
+                const uuid = validUuid(msg.playerId) ? msg.playerId.toLowerCase() : null;
+                if (!uuid) {
+                    send(ws, { type: 'error', message: 'Invalid player UUID. Please update the game.' });
+                    break;
+                }
+                let account = accounts[uuid];
+                if (!account) {
+                    account = {
+                        uuid, name: player.name,
+                        coins: Math.max(0, Math.min(100000000, Number(msg.legacyCoins) || 0)),
+                        unlockedSkins: String(msg.unlockedSkins || '').substring(0, 2000),
+                        currentSkinId: String(msg.currentSkinId || 'bright_green').substring(0, 64),
+                        lastIp: ip, createdAt: new Date().toISOString()
+                    };
+                    accounts[uuid] = account;
+                } else {
+                    account.name = player.name;
+                    account.lastIp = ip;
+                    const merged = new Set([
+                        ...String(account.unlockedSkins || '').split('|'),
+                        ...String(msg.unlockedSkins || '').split('|')
+                    ].map(v => v.trim()).filter(Boolean));
+                    account.unlockedSkins = [...merged].join('|');
+                    const equipped = String(msg.currentSkinId || '');
+                    if (equipped && merged.has(equipped)) account.currentSkinId = equipped;
+                }
+                account.lastSeen = new Date().toISOString();
+                player.uuid = uuid;
+                player.account = account;
+                saveAccounts();
+                sendProfile(player);
+
                 player.alive = true;
                 const sx = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
                 const sy = Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 10 - 5);
@@ -280,8 +345,24 @@ const id = nextId++;
                 if (ci >= 0) {
                     coins.splice(ci, 1);
                     player.coins++;
+                    if (player.account) {
+                        player.account.coins = Math.max(0, Number(player.account.coins) || 0) + 1;
+                        player.account.lastSeen = new Date().toISOString();
+                        saveAccounts(); // Save each coin immediately.
+                        sendProfile(player);
+                    }
                     ensureCoins();
                     broadcastCoins();
+                }
+                break;
+            }
+            case 'apple_collect': {
+                const ax = Number(msg.x), ay = Number(msg.y);
+                const ai = apples.findIndex(a => a.x === ax && a.y === ay);
+                if (ai >= 0) {
+                    apples.splice(ai, 1);
+                    ensureApples();
+                    broadcastApples();
                 }
                 break;
             }
@@ -318,6 +399,32 @@ setInterval(() => { broadcastAll(buildStatePayload()); }, STATE_RATE);
 setInterval(() => { ensureFoods(); broadcastFoods(); }, FOOD_RATE);
 setInterval(() => { ensureCoins(); broadcastCoins(); }, COIN_RATE);
 setInterval(() => { if (players.size === 0) return; const names = [...players.values()].map(p => `${p.name}(${p.body.length})`).join(', '); log(`Players: ${players.size} | ${names}`); }, 10000);
+
+// Admin command in the same server process: givecoins "Player Name" 500
+if (process.stdin.isTTY) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.on('line', line => {
+        const m = line.trim().match(/^givecoins\\s+"([^"]+)"\\s+(\\d+)$/i) ||
+                  line.trim().match(/^givecoins\\s+(\\S+)\\s+(\\d+)$/i);
+        if (!m) { if (line.trim()) console.log('Use: givecoins "Player Name" 500'); return; }
+        const amount = Number(m[2]);
+        if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100000000) {
+            console.log('Amount must be between 1 and 100000000.'); return;
+        }
+        const name = m[1].trim().toLowerCase();
+        const found = Object.values(accounts).filter(a => String(a.name || '').toLowerCase() === name);
+        if (found.length !== 1) {
+            console.log(found.length ? 'Name is ambiguous; use a unique player name.' : 'Player not found; they must join once first.');
+            return;
+        }
+        const account = found[0];
+        account.coins = Math.max(0, Number(account.coins) || 0) + amount;
+        account.lastSeen = new Date().toISOString();
+        saveAccounts();
+        for (const p of players.values()) if (p.uuid === account.uuid) sendProfile(p);
+        console.log('[Coins] +' + amount + ' for ' + account.name + '. Balance: ' + account.coins);
+    });
+}
 
 const cleanup = async () => {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
