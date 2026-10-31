@@ -234,12 +234,12 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
         String legacyCoins = saveRef != null ? String.valueOf(saveRef.coins) : "0";
         String unlockedSkins = saveRef != null ? saveRef.unlockedSkins : "";
         String currentSkinId = saveRef != null ? saveRef.currentSkinId : skinId;
-        send("{\\"type\\":\\"join\\",\\"name\\":\\"" + escapeJson(playerName) +
-             "\\",\\"skin\\":\\"" + escapeJson(skinId) +
-             "\\",\\"playerId\\":\\"" + escapeJson(playerUuid) +
-             "\\",\\"legacyCoins\\":" + legacyCoins +
-             ",\\"unlockedSkins\\":\\"" + escapeJson(unlockedSkins) +
-             "\\",\\"currentSkinId\\":\\"" + escapeJson(currentSkinId) + "\\"}");
+        send("{\"type\":\"join\",\"name\":\"" + escapeJson(playerName) +
+             "\",\"skin\":\"" + escapeJson(skinId) +
+             "\",\"playerId\":\"" + escapeJson(playerUuid) +
+             "\",\"legacyCoins\":" + legacyCoins +
+             ",\"unlockedSkins\":\"" + escapeJson(unlockedSkins) +
+             "\",\"currentSkinId\":\"" + escapeJson(currentSkinId) + "\"}");
     }
 
     void onDisconnected() {
