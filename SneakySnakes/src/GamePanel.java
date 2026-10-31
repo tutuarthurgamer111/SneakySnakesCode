@@ -1716,7 +1716,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                         continue;
                     }
 
-                    String address = "\"secure\\\"\\s*:\\s*true".matches("") ? "" : "ws://" + host + ":" + port;
+                    java.util.regex.Matcher secureMatcher =
+                        java.util.regex.Pattern.compile("\"secure\"\\s*:\\s*true", java.util.regex.Pattern.CASE_INSENSITIVE)
+                            .matcher(object);
+                    boolean secure = secureMatcher.find() || port == 443;
+                    String address = (secure ? "wss://" : "ws://") + host + ":" + port;
                     if (!addresses.contains(address)) {
                         addresses.add(address);
                     }
