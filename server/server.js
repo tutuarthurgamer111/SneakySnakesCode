@@ -49,6 +49,50 @@ const coins   = [];
 const apples = []; 
 const serverStartTime = Date.now();
 const economyPath = path.join(__dirname, 'data', 'economy.json');
+const accountsPath = path.join(__dirname, 'data', 'accounts.json');
+let accounts = {};
+try { if (fs.existsSync(accountsPath)) accounts = JSON.parse(fs.readFileSync(accountsPath, 'utf8')); } catch (e) { console.error('[Accounts] load failed:', e.message); }
+function saveAccounts() {
+    fs.mkdirSync(path.dirname(accountsPath), { recursive: true });
+    const temp = accountsPath + '.tmp';
+    fs.writeFileSync(temp, JSON.stringify(accounts, null, 2));
+    fs.renameSync(temp, accountsPath);
+}
+function usernameKey(value) { return String(value || '').trim().normalize('NFKC').toLowerCase(); }
+function hashPassword(password, salt) { return crypto.scryptSync(String(password), salt, 64).toString('hex'); }
+function verifyPassword(account, password) {
+    try {
+        const a = Buffer.from(account.passwordHash, 'hex');
+        const b = Buffer.from(hashPassword(password, account.passwordSalt), 'hex');
+        return a.length === b.length && crypto.timingSafeEqual(a, b);
+    } catch (_) { return false; }
+}
+function publicProfile(a) {
+    return { uuid: a.uuid, username: a.username, nickname: a.nickname, coins: a.coins || 0,
+        ownedSkins: a.ownedSkins || [], equippedSkin: a.equippedSkin || 'bright_green', highScore: a.highScore || 0 };
+}
+function findAccountByToken(token) {
+    if (!token) return null;
+    const hash = crypto.createHash('sha256').update(String(token)).digest('hex');
+    return Object.values(accounts).find(a => a.tokenHash === hash) || null;
+}
+function sendAuthError(ws, code) { send(ws, { type: 'auth_error', code }); }
+function issueAccountSession(ws, player, account, responseType, recovery) {
+    const token = crypto.randomBytes(32).toString('hex');
+    account.tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    saveAccounts();
+    if (player) {
+        player.accountKey = usernameKey(account.username);
+        player.accountUuid = account.uuid;
+        player.name = account.nickname;
+        player.skin = account.equippedSkin || 'bright_green';
+        player.coins = account.coins || 0;
+    }
+    const response = { type: responseType, token, uuid: account.uuid, profile: publicProfile(account) };
+    if (recovery) response.recoveryCode = account.recoveryCode;
+    send(ws, response);
+}
+
 const SKIN_PRICES = {
     obsidian: 150, lava: 200, ice: 200, midnight: 120, toxic: 300,
     rich: 300, tex_snake: 350, tex_pixel: 400, tex_neon_grid: 400,
