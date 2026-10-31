@@ -383,7 +383,8 @@ const id = nextId++;
                 break;
             }
             case 'respawn': {
-                if (player.alive) break;
+                // O cliente pode ter marcado a morte localmente antes de receber a confirmação do servidor.
+                // Por isso, o pedido de respawn é tratado como reinício seguro mesmo se alive ainda estiver true.
                 const rx = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 9) - 4));
                 const ry = Math.max(4, Math.min(WORLD_TILES - 5, Math.floor(WORLD_TILES / 2) + Math.floor(Math.random() * 9) - 4));
                 player.alive = true; player.body = [];
