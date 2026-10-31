@@ -107,7 +107,8 @@ jobs:
         with:
           name: SneakySnakes-Windows-Installer
           path: build/installer/SneakySnakes-4.0.3.exe
-          if-no-files-found: error\n
+          if-no-files-found: error
+
   publish-direct-downloads:
     name: Publish direct APK and EXE downloads
     runs-on: ubuntu-latest
