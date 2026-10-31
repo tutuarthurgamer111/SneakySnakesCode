@@ -319,7 +319,7 @@ server.listen(port, async () => {
 wss.on('connection', (ws, req) => {
 const id = nextId++;
     const ip = req.socket.remoteAddress;
-    const player = { id, ws, name: 'Player' + id, skin: 'bright_blue', body: [], dir: [1, 0], alive: false, score: 0, coins: 0 };
+    const player = { id, ws, name: 'Player' + id, skin: 'bright_blue', body: [], dir: [1, 0], alive: false, score: 0, coins: 0, accountKey: null, accountUuid: null };
     players.set(id, player);
 
     send(ws, { type: 'welcome', id, worldTiles: WORLD_TILES });
@@ -331,6 +331,51 @@ const id = nextId++;
     ws.on('message', raw => {
         let msg; try { msg = JSON.parse(raw); } catch { return; }
         switch (msg.type) {
+            case 'auth_register': {
+                const username = String(msg.username || '').trim().normalize('NFKC');
+                const key = usernameKey(username);
+                const password = String(msg.password || '');
+                const nickname = String(msg.nickname || '').trim().slice(0, 24);
+                if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) { sendAuthError(ws, 'INVALID_USERNAME'); break; }
+                if (password.length < 8 || password.length > 128) { sendAuthError(ws, 'INVALID_PASSWORD'); break; }
+                if (!nickname) { sendAuthError(ws, 'INVALID_NICKNAME'); break; }
+                if (accounts[key]) { sendAuthError(ws, 'USERNAME_TAKEN'); break; }
+                const salt = crypto.randomBytes(16).toString('hex');
+                const account = { uuid: crypto.randomUUID(), username, nickname, passwordSalt: salt,
+                    passwordHash: hashPassword(password, salt), coins: 0, ownedSkins: [],
+                    equippedSkin: 'bright_green', highScore: 0,
+                    recoveryCode: crypto.randomBytes(5).toString('hex').toUpperCase(), tokenHash: '' };
+                accounts[key] = account;
+                issueAccountSession(ws, player, account, 'auth_registered', true);
+                break;
+            }
+            case 'auth_login': {
+                const account = accounts[usernameKey(msg.username)];
+                if (!account || !verifyPassword(account, msg.password)) { sendAuthError(ws, 'INVALID_CREDENTIALS'); break; }
+                issueAccountSession(ws, player, account, 'auth_logged_in', false);
+                break;
+            }
+            case 'auth_resume': {
+                const account = findAccountByToken(msg.token);
+                if (!account) { sendAuthError(ws, 'INVALID_SESSION'); break; }
+                player.accountKey = usernameKey(account.username);
+                player.accountUuid = account.uuid;
+                player.name = account.nickname;
+                player.skin = account.equippedSkin || 'bright_green';
+                player.coins = account.coins || 0;
+                send(ws, { type: 'auth_resumed', uuid: account.uuid, profile: publicProfile(account) });
+                break;
+            }
+            case 'auth_delete': {
+                const account = player.accountKey ? accounts[player.accountKey] : null;
+                if (!account || !verifyPassword(account, msg.password)) { sendAuthError(ws, 'INVALID_CREDENTIALS'); break; }
+                delete accounts[player.accountKey];
+                saveAccounts();
+                player.accountKey = null;
+                player.accountUuid = null;
+                send(ws, { type: 'account_deleted' });
+                break;
+            }
             case 'join': {
                 player.name = String(msg.name || ('Player' + id)).substring(0, 24);
                 const requestedSkin = String(msg.skin || 'bright_blue').substring(0, 40);
