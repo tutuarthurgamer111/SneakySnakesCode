@@ -12,6 +12,8 @@ final class NativeAudio {
     private static MediaPlayer music;
     private static AssetManager assets;
     private static boolean enabled = true;
+    private static boolean pausedByFocus = false;
+    private static boolean musicWasPlayingBeforeFocusLoss = false;
     private static final Random random = new Random();
 
     static synchronized void init(AssetManager manager) {
@@ -30,7 +32,7 @@ final class NativeAudio {
     }
 
     static synchronized void play(String name) {
-        if (!enabled || pool == null) return;
+        if (!enabled || pausedByFocus || pool == null) return;
         Integer id = sounds.get(name);
         if (id != null) pool.play(id, 1f, 1f, 1, 0, 1f);
     }
@@ -40,7 +42,7 @@ final class NativeAudio {
 
     private static void startMusic(String file) {
         stopMusic();
-        if (!enabled || assets == null) return;
+        if (!enabled || pausedByFocus || assets == null) return;
         try {
             AssetFileDescriptor fd = assets.openFd("sounds/" + file);
             music = new MediaPlayer();
@@ -56,6 +58,21 @@ final class NativeAudio {
         } catch (Exception ignored) { stopMusic(); }
     }
 
+    static synchronized void pauseForFocusLoss() {
+        pausedByFocus = true;
+        musicWasPlayingBeforeFocusLoss = music != null && music.isPlaying();
+        if (music != null) { try { if (music.isPlaying()) music.pause(); } catch (Exception ignored) {} }
+        if (pool != null) pool.autoPause();
+    }
+
+    static synchronized void resumeAfterFocusGain() {
+        pausedByFocus = false;
+        if (!enabled) return;
+        if (music != null && musicWasPlayingBeforeFocusLoss) { try { music.start(); } catch (Exception ignored) {} }
+        musicWasPlayingBeforeFocusLoss = false;
+        if (pool != null) pool.autoResume();
+    }
+
     static synchronized void stopMusic() {
         if (music != null) {
             try { music.stop(); } catch (Exception ignored) {}
@@ -68,7 +85,7 @@ final class NativeAudio {
     static synchronized void setEnabled(boolean value) {
         enabled = value;
         if (!enabled) { stopMusic(); if (pool != null) pool.autoPause(); }
-        else if (pool != null) pool.autoResume();
+        else if (pool != null && !pausedByFocus) pool.autoResume();
     }
 
     static synchronized void release() {
