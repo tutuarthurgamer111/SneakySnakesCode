@@ -230,6 +230,10 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
         connected = true;
         statusMsg = "Joining...";
         String skinId = SkinSystem.current().id;
+        String token = AccountSession.token();
+        if (token != null && !token.isEmpty()) {
+            send("{\"type\":\"auth_resume\",\"token\":\"" + escapeJson(token) + "\"}");
+        }
         send("{\"type\":\"join\",\"name\":\"" + escapeJson(playerName) +
              "\",\"skin\":\"" + escapeJson(skinId) + "\"}");
     }
@@ -285,10 +289,26 @@ case "state":
                     }
                     break;
                 }
+                case "auth_resumed": {
+                    String profile=jsonObject(msg,"profile");
+                    if(profile!=null)applyAccountProfile(profile);
+                    break;
+                }
+                case "auth_error": {
+                    if ("INVALID_SESSION".equals(jsonString(msg,"code"))) AccountSession.clearToken();
+                    break;
+                }
+                case "profile": {
+                    String profile=jsonObject(msg,"profile");
+                    if(profile!=null)applyAccountProfile(profile);
+                    break;
+                }
                 case "coin_result": {
                     if (jsonBool(msg, "accepted")) {
-                        myCoins += 3;
-                        if (saveRef != null) { saveRef.coins += 3; saveRef.save(); }
+                        int balance=jsonInt(msg,"balance");
+                        if (saveRef != null && balance >= 0 && !jsonBool(msg,"guest")) {
+                            saveRef.coins=balance;saveRef.save();
+                        } else if (jsonBool(msg,"guest")) myCoins += 3;
                     }
                     break;
                 }
@@ -298,6 +318,25 @@ case "state":
                 case "apple_spawn":  parseApples(msg); break; // ← new Apple item
             }
         } catch (Exception ignored) {}
+    }
+
+    private void applyAccountProfile(String profile) {
+        if(saveRef==null)return;
+        int balance=jsonInt(profile,"coins");
+        if(balance>=0)saveRef.coins=balance;
+        String equipped=jsonString(profile,"equippedSkin");
+        if(equipped!=null) {
+            SkinSystem.setById(equipped);
+            saveRef.currentSkinId=equipped;
+        }
+        String owned=jsonStringArray(profile,"ownedSkins");
+        if(owned!=null) {
+            saveRef.unlockedSkins=owned;
+            SkinSystem.deserializeUnlocked(owned);
+        }
+        int best=jsonInt(profile,"highScore");
+        if(best>saveRef.highScore)saveRef.highScore=best;
+        saveRef.save();
     }
 
     // ── Persistent stat saving on death ──────────────────────────────────────
@@ -1034,6 +1073,21 @@ private String serverUptime = "Server Est: 0s";
     // =========================================================================
     // JSON HELPERS
     // =========================================================================
+    private static String jsonObject(String json,String key) {
+        String needle="\""+key+"\"";int i=json.indexOf(needle);if(i<0)return null;
+        int start=json.indexOf('{',i+needle.length());if(start<0)return null;
+        int depth=0;boolean quoted=false,escape=false;
+        for(int p=start;p<json.length();p++){char ch=json.charAt(p);
+            if(quoted){if(escape)escape=false;else if(ch=='\\\\')escape=true;else if(ch=='\"')quoted=false;}
+            else if(ch=='\"')quoted=true;else if(ch=='{')depth++;else if(ch=='}'&&--depth==0)return json.substring(start,p+1);
+        }return null;
+    }
+    private static String jsonStringArray(String json,String key) {
+        String needle="\""+key+"\"";int i=json.indexOf(needle);if(i<0)return null;
+        int start=json.indexOf('[',i+needle.length()),end=json.indexOf(']',start);if(start<0||end<0)return null;
+        java.util.regex.Matcher m=java.util.regex.Pattern.compile("\"((?:\\\\.|[^\"\\\\])*)\"").matcher(json.substring(start+1,end));
+        StringBuilder out=new StringBuilder();while(m.find()){if(out.length()>0)out.append('|');out.append(m.group(1));}return out.toString();
+    }
     private static String  jsonString(String json,String key) { String k="\""+key+"\":\""; int i=json.indexOf(k); if(i<0)return null; int s=i+k.length(),e=json.indexOf('"',s); if(e<0)return null; return json.substring(s,e); }
     private static int     jsonInt(String json,String key)    { String k="\""+key+"\":";   int i=json.indexOf(k); if(i<0)return -1;  int s=i+k.length(),e=s; while(e<json.length()&&(Character.isDigit(json.charAt(e))||json.charAt(e)=='-'))e++; try{return Integer.parseInt(json.substring(s,e));}catch(NumberFormatException ex){return -1;} }
     private static boolean jsonBool(String json,String key)   { String k="\""+key+"\":";   int i=json.indexOf(k); if(i<0)return false; return json.startsWith("true",i+k.length()); }
