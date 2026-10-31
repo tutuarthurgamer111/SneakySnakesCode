@@ -123,7 +123,7 @@ public class NativeGameView extends View {
                     JSONObject profile=o.optJSONObject("profile");
                     if(profile!=null)saveServerProfile(profile);
                 } else if(type.equals("coin_result")) {
-                    if(o.optBoolean("accepted") && getContext() instanceof Activity) {
+                    if(o.optBoolean("accepted") && !o.optBoolean("guest") && getContext() instanceof Activity) {
                         Activity activity=(Activity)getContext();
                         android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
                         prefs.edit().putInt("server_coins",Math.max(0,o.optInt("balance",0))).apply();
