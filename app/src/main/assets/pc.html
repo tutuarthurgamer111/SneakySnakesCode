@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b1220"><title>SneakySnakes PC Touch</title>
+<style>
+:root{--bg:#0b1220;--panel:#142238;--line:#294766;--blue:#35a8ed;--green:#269c60;--gold:#d99b35}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:#eef6ff;font:16px system-ui,Arial}
+body{display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 20%,#1d3452,#080e18 70%)}
+#app{width:100%;height:100%;max-width:1000px;position:relative;display:flex;flex-direction:column}
+header{height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid #ffffff18;background:#0b1423}
+.brand{font-weight:900;letter-spacing:1px;color:#9bdcff}.brand span{color:#fff}
+#status{font-size:12px;color:#9bb4cf}
+main{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;padding:12px}
+.view{display:none;width:min(100%,560px);max-height:100%;overflow:auto}.view.active{display:block}
+.panel{background:#122137ed;border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 15px 45px #0007}
+h1{font-size:clamp(32px,8vw,54px);margin:0;text-align:center;color:#fff;text-shadow:0 0 22px #36a9ff66}
+h2{text-align:center;margin:0 0 16px;color:#a9ddff}
+p{color:#9db4ce;text-align:center;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+button{border:1px solid #ffffff18;border-radius:12px;padding:14px 12px;min-height:48px;color:#fff;font-weight:800;font-size:15px;background:#2b405c}
+button:active{filter:brightness(1.25);transform:scale(.98)}
+.primary{background:#167fba}.green{background:#20844f}.purple{background:#7847a9}.gold{background:#93641d}.wide{grid-column:1/-1}
+.secondary{background:#293b54}
+input{display:block;width:100%;padding:14px;margin:9px 0;background:#091321;color:white;border:1px solid #35516f;border-radius:10px;font-size:16px}
+.row{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.row>*{flex:1}
+.hint{font-size:12px;color:#86a0bc;text-align:center;margin-top:12px}
+#gameView{width:100%;height:100%;display:none;flex-direction:column;gap:8px}
+#gameView.active{display:flex}
+#stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+canvas{width:100%;height:100%;max-height:100%;object-fit:contain;border-radius:12px;background:#101a2b;border:1px solid #29415d}
+#hud{position:absolute;top:8px;left:8px;background:#07111edb;padding:8px 10px;border-radius:9px;font-size:12px;pointer-events:none}
+#gameTop{display:flex;justify-content:space-between;align-items:center}
+#controls{height:150px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 12px 8px}
+#pad{display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(2,48px);gap:5px}
+#pad button{padding:0;font-size:22px;background:#244363;border:1px solid #7ccaff55}
+#pad .blank{visibility:hidden}
+#boost{width:82px;height:82px;border-radius:50%;background:#9b5a20;border:2px solid #ffcb80;font-size:13px}
+#controls{height:164px;gap:18px;touch-action:none;user-select:none}
+#stickZone{width:150px;height:150px;display:grid;place-items:center;touch-action:none}
+#stickBase{width:124px;height:124px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#365a7c,#14283e 72%);border:2px solid #78caff88;box-shadow:0 8px 25px #0008;position:relative;touch-action:none}
+#stickKnob{position:absolute;width:54px;height:54px;left:33px;top:33px;border-radius:50%;background:linear-gradient(145deg,#8bdcff,#267db8);border:2px solid #d5f3ff;box-shadow:0 4px 12px #0009;pointer-events:none}
+#touchActions{display:flex;gap:12px;align-items:center}
+.touchAction{width:74px;height:74px;border-radius:50%;padding:4px;background:linear-gradient(145deg,#315b7d,#142b43);border:2px solid #79caff88;font-size:25px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.touchAction small{font-size:9px;letter-spacing:.3px}
+@media(max-height:520px){#controls{height:112px}#stickZone{width:108px;height:108px}#stickBase{width:96px;height:96px}#stickKnob{left:24px;top:24px;width:44px;height:44px}.touchAction{width:62px;height:62px}}
+#notice{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#0b1b2d;padding:9px 14px;border-radius:9px;font-size:12px;display:none;white-space:nowrap}
+.server{width:100%;margin:5px 0;text-align:left;font-size:13px}
+label{display:flex;align-items:center;gap:8px;color:#c3d7eb;margin:14px 0}
+label input{width:auto;margin:0}
+@media(orientation:landscape){#app{max-width:1200px}#controls{height:116px}#pad{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,42px)}#pad button{min-height:40px}#boost{width:72px;height:72px}main{padding:8px}}
+</style></head>
+<body><div id="app">
+<header><div class="brand">SNEAKY<span>SNAKES</span></div><div id="status">MOBILE EDITION</div></header>
+<main>
+<section id="menuView" class="view active"><div class="panel">
+<h1>SneakySnakes</h1><p>Sneak' em! • PC Edition adaptada para toque.</p>
+<div class="grid">
+<button id="onlineBtn" class="primary wide">MULTIPLAYER ONLINE</button>
+<button id="classicBtn" class="green">CLÁSSICO</button><button id="partyBtn" class="purple">PARTY MODE</button>
+<button id="infiniteBtn" class="gold wide">MODO INFINITO</button>
+<button id="settingsBtn" class="secondary wide">CONFIGURAÇÕES</button>
+</div><p id="record">Recorde: 0</p><p class="hint">WASD / Setas = mover • N = dia/noite • ESC = pausar</p>
+</div></section>
+<section id="onlineView" class="view"><div class="panel"><h2>MULTIPLAYER</h2><p>Entre em um servidor público ou informe o endereço.</p>
+<input id="playerName" maxlength="24" placeholder="Seu nome" value="Player">
+<input id="serverAddress" placeholder="ws://endereço:3000" value="ws://163.176.148.122:3000">
+<div class="row"><button id="connectBtn" class="primary">CONECTAR</button><button id="refreshBtn" class="secondary">ATUALIZAR</button></div>
+<div id="servers" class="hint">Carregando lista...</div><button id="backOnline" class="secondary wide" style="margin-top:12px">VOLTAR</button>
+</div></section>
+<section id="settingsView" class="view"><div class="panel"><h2>CONFIGURAÇÕES</h2>
+<label><input id="musicToggle" type="checkbox" checked> Música</label>
+<label><input id="sfxToggle" type="checkbox" checked> Efeitos sonoros</label>
+<button id="backSettings" class="secondary wide">VOLTAR</button></div></section>
+<section id="endView" class="view"><div class="panel"><h2 id="endTitle">FIM DE JOGO</h2><p id="endInfo"></p><div class="row"><button id="againBtn" class="green">JOGAR DE NOVO</button><button id="menuBtn" class="secondary">MENU</button></div></div></section>
+<section id="gameView" class="view"><div id="gameTop"><b id="modeLabel">CLÁSSICO</b><button id="pauseBtn" class="secondary" style="min-height:38px;padding:7px 16px">PAUSAR</button></div>
+<div id="stage"><canvas id="board" width="800" height="600"></canvas><div id="hud">Pontos: 0</div></div>
+<div id="controls"><div id="stickZone"><div id="stickBase"><div id="stickKnob"></div></div></div><div id="touchActions"><button id="nightBtn" class="touchAction">☾<small>DIA/NOITE</small></button><button id="pauseTouch" class="touchAction">Ⅱ<small>PAUSAR</small></button></div></div>
+</section>
+</main><div id="notice"></div></div>
+<script>
+'use strict';
+(()=>{
+const $=id=>document.getElementById(id), canvas=$('board'),ctx=canvas.getContext('2d');
+const API='https://sneakysnakes-server-list.vercel.app/api/servers', TILE=20, COLS=40, ROWS=30;
+let view='menuView',mode='classic',snake=[],foods=[],dir={x:1,y:0},next={x:1,y:0},score=0,alive=false,paused=false,boost=false,online=false,ws=null,playerId=null,world=64,players={},serverFoods=[],serverCoins=[],coins=0,lastFrame=0,acc=0,partyTick=0,partyEvent='',musicOn=true,sfxOn=true,lastTrack='',nightMode=false;
+const saveKey='snakemobile-v1';
+let save={high:0,name:'Player'};
+try{save=Object.assign(save,JSON.parse(localStorage.getItem(saveKey)||'{}'))}catch(e){}
+function persist(){localStorage.setItem(saveKey,JSON.stringify(save))}
+function toast(s){$('notice').textContent=s;$('notice').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('notice').style.display='none',2200)}
+function show(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$(id).classList.add('active');view=id;$('status').textContent=id==='gameView'?'EM PARTIDA':'MOBILE EDITION'}
+function music(file){if(!musicOn)return;if(window.bgMusic&&lastTrack!==file){window.bgMusic.pause();window.bgMusic.currentTime=0}if(!window.bgMusic||lastTrack!==file){lastTrack=file;window.bgMusic=new Audio('audio/'+file);window.bgMusic.loop=true;window.bgMusic.volume=.48}window.bgMusic.play().catch(()=>{lastTrack=''})}
+function stopMusic(){if(window.bgMusic){window.bgMusic.pause();window.bgMusic.currentTime=0}lastTrack=''}
+function sound(file){if(!sfxOn)return;const a=new Audio('audio/'+file);a.volume=.45;a.play().catch(()=>{})}
+function menu(){disconnect();alive=false;show('menuView');$('record').textContent='Recorde: '+save.high;music('background.mp3')}
+function start(m){disconnect();mode=m;online=false;score=0;coins=0;snake=[];for(let i=0;i<4;i++)snake.push({x:20-i,y:15});dir={x:1,y:0};next={x:1,y:0};foods=[];for(let i=0;i<8;i++)spawnFood();alive=true;paused=false;partyTick=0;partyEvent='';show('gameView');$('modeLabel').textContent=m.toUpperCase();music('track'+(1+Math.floor(Math.random()*4))+'.mp3');lastFrame=performance.now();acc=0}
+function spawnFood(){let p,n=0;do{p={x:Math.random()*COLS|0,y:Math.random()*ROWS|0}}while(n++<200&&(snake.some(s=>s.x===p.x&&s.y===p.y)||foods.some(f=>f.x===p.x&&f.y===p.y)));foods.push(p)}
+function setDir(d){const v={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}}[d];if(v&&!(v.x===-dir.x&&v.y===-dir.y))next=v}
+function die(){alive=false;if(online){if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'die',reason:'collision'}));}else{save.high=Math.max(save.high,score);persist()}$('endTitle').textContent='FIM DE JOGO';$('endInfo').textContent='Pontuação: '+score+' • Recorde: '+save.high;show('endView');stopMusic();sound('hit.mp3')}
+function moveOffline(){dir=next;const h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};if(h.x<0||h.y<0||h.x>=COLS||h.y>=ROWS||snake.slice(0,-1).some(p=>p.x===h.x&&p.y===h.y)){die();return}snake.unshift(h);const i=foods.findIndex(f=>f.x===h.x&&f.y===h.y);if(i>=0){foods.splice(i,1);score+=10;spawnFood();sound('eat.mp3')}else snake.pop();if(mode==='classic'&&snake.length>=60)die();if(mode==='party'&&++partyTick%180===0){partyEvent='EVENTO: PONTOS EM DOBRO';toast(partyEvent);setTimeout(()=>partyEvent='',8000)}}
+function disconnect(){if(ws){try{ws.onclose=null;ws.close()}catch(e){}ws=null}online=false;players={};playerId=null}
+async function refreshServers(){const box=$('servers');box.textContent='Buscando servidores...';try{const r=await fetch(API,{cache:'no-store'});if(!r.ok)throw Error();const data=await r.json(),list=(data.servers||[]).filter(s=>s.host&&s.port);box.innerHTML='';if(!list.length){box.textContent='Nenhum servidor listado. Você ainda pode digitar o endereço.';return}list.forEach(s=>{const b=document.createElement('button');b.className='server secondary';b.textContent=(s.name||s.host)+':'+s.port+' • '+(s.players??'?')+' jogadores';b.addEventListener('click',()=>{$('serverAddress').value=(s.secure?'wss://':'ws://')+s.host+':'+s.port});box.appendChild(b)})}catch(e){box.textContent='Não foi possível carregar a lista. Digite o endereço manualmente.'}}
+function connect(){const address=$('serverAddress').value.trim(),name=$('playerName').value.trim().slice(0,24)||'Player';if(!/^wss?:\/\//i.test(address)){toast('Endereço precisa começar com ws:// ou wss://');return}disconnect();toast('Conectando...');$('connectBtn').disabled=true;ws=new WebSocket(address);ws.onopen=()=>{$('connectBtn').disabled=false;online=true;mode='online';score=0;coins=0;snake=[];dir={x:1,y:0};next={x:1,y:0};ws.send(JSON.stringify({type:'join',name,skin:'bright_blue'}));alive=true;show('gameView');$('modeLabel').textContent='ONLINE';music('track'+(1+Math.floor(Math.random()*4))+'.mp3');toast('Conectado ao servidor!')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}if(m.type==='welcome'){playerId=m.id;world=m.worldTiles||64}if(m.type==='state'){players={};(m.players||[]).forEach(p=>{players[p.id]=p;if(p.id===playerId){snake=(p.body||[]).map(b=>({x:b[0],y:b[1]}));score=p.score||0;coins=p.coins||0;alive=!!p.alive}})}if(m.type==='foods')serverFoods=m.foods||[];if(m.type==='coin_spawn')serverCoins=m.coins||[];if(m.type==='player_died'&&m.id===playerId){alive=false;$('endTitle').textContent='VOCÊ MORREU';$('endInfo').textContent='Pontuação: '+score;show('endView');stopMusic()}};ws.onerror=()=>{$('connectBtn').disabled=false;toast('Falha na conexão. Confira o endereço e o servidor.')};ws.onclose=()=>{$('connectBtn').disabled=false;online=false;$('connectBtn').disabled=false;if(view==='gameView')toast('Conexão encerrada')}}}
+function moveOnline(){if(!ws||ws.readyState!==1||!alive||!snake.length)return;dir=next;const h={x:snake[0].x+dir.x,y:snake[0].y+dir.y};if(h.x<0||h.y<0||h.x>=world||h.y>=world||snake.slice(0,-1).some(p=>p.x===h.x&&p.y===h.y)){ws.send(JSON.stringify({type:'die',reason:'collision'}));return}for(const p of Object.values(players)){if(p.id!==playerId&&p.alive&&(p.body||[]).some(b=>b[0]===h.x&&b[1]===h.y)){ws.send(JSON.stringify({type:'die',reason:'player'}));return}}snake.unshift(h);snake.pop();const ci=serverCoins.findIndex(c=>c[0]===h.x&&c[1]===h.y);if(ci>=0)ws.send(JSON.stringify({type:'coin_collect',x:h.x,y:h.y}));ws.send(JSON.stringify({type:'move',dir:[dir.x,dir.y],head:[h.x,h.y],body:snake.map(p=>[p.x,p.y])}))}
+function draw(){ctx.fillStyle=nightMode?'#050812':'#101a2b';ctx.fillRect(0,0,800,600);ctx.strokeStyle=nightMode?'#37d99a22':'#ffffff0c';for(let x=0;x<=800;x+=20){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,600);ctx.stroke()}for(let y=0;y<=600;y+=20){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke()}let head=snake[0]||{x:20,y:15},scale=online?Math.min(800/world,600/world):20,ox=online?400-(head.x+.5)*scale:0,oy=online?300-(head.y+.5)*scale:0;const px=x=>ox+x*scale,py=y=>oy+y*scale;const food=online?serverFoods:foods;food.forEach(f=>{const x=online?f[0]:f.x,y=online?f[1]:f.y;ctx.fillStyle='#ff6979';ctx.beginPath();ctx.arc(px(x)+scale/2,py(y)+scale/2,scale*.3,0,7);ctx.fill()});if(online)serverCoins.forEach(c=>{ctx.fillStyle='#ffd45a';ctx.beginPath();ctx.arc(px(c[0])+scale/2,py(c[1])+scale/2,scale*.25,0,7);ctx.fill()});if(online)Object.values(players).forEach(p=>{if(p.id!==playerId&&p.alive)(p.body||[]).forEach((b,i)=>{ctx.fillStyle='#ff9c55';ctx.fillRect(px(b[0])+1,py(b[1])+1,scale-2,scale-2)})});snake.forEach((s,i)=>{ctx.fillStyle=i===0?'#70d9ff':'#329de0';ctx.fillRect(px(s.x)+1,py(s.y)+1,scale-2,scale-2)});$('hud').textContent='Pontos: '+score+' • '+(online?'ONLINE':mode.toUpperCase())+(partyEvent?' • '+partyEvent:'')}
+function frame(t){if(view==='gameView'&&alive&&!paused){const delta=Math.min(50,t-lastFrame);acc+=delta;const rate=online?120:(boost?75:115);while(acc>=rate){if(online)moveOnline();else moveOffline();acc-=rate}}lastFrame=t;draw();requestAnimationFrame(frame)}
+// Ações centralizadas: clique e toque executam exatamente uma vez no Android WebView.
+const bindButton=(id,action)=>{
+ const el=$(id);let last=0;
+ const run=e=>{if(e){e.preventDefault();e.stopPropagation()}const now=Date.now();if(now-last<400)return;last=now;try{action()}catch(err){toast('Erro: '+err.message)}};
+ el.onclick=run;
+ el.addEventListener('touchend',run,{passive:false});
+};
+bindButton('onlineBtn',()=>{show('onlineView');refreshServers()});
+bindButton('classicBtn',()=>start('classic'));
+bindButton('partyBtn',()=>start('party'));
+bindButton('infiniteBtn',()=>start('infinite'));
+bindButton('settingsBtn',()=>show('settingsView'));
+bindButton('backOnline',()=>show('menuView'));
+bindButton('backSettings',()=>show('menuView'));
+bindButton('connectBtn',connect);
+bindButton('refreshBtn',refreshServers);
+bindButton('menuBtn',menu);
+bindButton('againBtn',()=>start(mode==='online'?'classic':mode));
+bindButton('pauseBtn',()=>{if(!alive)return;paused=!paused;$('pauseBtn').textContent=paused?'CONTINUAR':'PAUSAR';if(paused)toast('Jogo pausado')});
+$('musicToggle').onchange=e=>{musicOn=e.target.checked;if(!musicOn)stopMusic();else if(view==='gameView')music('track1.mp3');else music('background.mp3')};
+$('sfxToggle').onchange=e=>sfxOn=e.target.checked;
+// Joystick virtual analógico com movimento contínuo do dedo.
+const stickZone=$('stickZone'),stickBase=$('stickBase'),stickKnob=$('stickKnob');
+let stickPointer=null;
+function resetStick(){stickPointer=null;stickKnob.style.transform='translate(0px,0px)'}
+function updateStick(e){
+ const r=stickBase.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+ let dx=e.clientX-cx,dy=e.clientY-cy,limit=r.width*.32,len=Math.hypot(dx,dy);
+ if(len>limit){dx=dx/len*limit;dy=dy/len*limit}
+ stickKnob.style.transform='translate('+dx+'px,'+dy+'px)';
+ if(Math.hypot(dx,dy)>limit*.28){if(Math.abs(dx)>Math.abs(dy))setDir(dx>0?'right':'left');else setDir(dy>0?'down':'up')}
+}
+stickZone.addEventListener('pointerdown',e=>{e.preventDefault();stickPointer=e.pointerId;stickZone.setPointerCapture(e.pointerId);updateStick(e)});
+stickZone.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){e.preventDefault();updateStick(e)}});
+stickZone.addEventListener('pointerup',e=>{if(e.pointerId===stickPointer)resetStick()});
+stickZone.addEventListener('pointercancel',resetStick);
+$('nightBtn').addEventListener('click',()=>{nightMode=!nightMode;toast(nightMode?'Modo noite':'Modo dia')});
+$('pauseTouch').addEventListener('click',()=>{if(!alive)return;paused=!paused;$('pauseBtn').textContent=paused?'CONTINUAR':'PAUSAR';toast(paused?'Jogo pausado':'Jogo retomado')});
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='arrowup'||k==='w')setDir('up');if(k==='arrowdown'||k==='s')setDir('down');if(k==='arrowleft'||k==='a')setDir('left');if(k==='arrowright'||k==='d')setDir('right');if(k==='n')nightMode=!nightMode;if(k==='escape'&&view==='gameView'){paused=!paused;$('pauseBtn').textContent=paused?'CONTINUAR':'PAUSAR'}});
+document.addEventListener('pointerdown',()=>{if(!window.audioUnlocked){window.audioUnlocked=true;music(view==='gameView'?'track1.mp3':'background.mp3')}},{once:true});
+window.onerror=(message)=>{try{toast('Erro interno: '+String(message).slice(0,100))}catch(e){}};
+window.gameBack=()=>{if(view==='gameView'){if(alive){paused=!paused;$('pauseBtn').textContent=paused?'CONTINUAR':'PAUSAR'}else menu()}else menu()};
+window.addEventListener('beforeunload',disconnect);
+$('record').textContent='Recorde: '+save.high;$('playerName').value=save.name||'Player';requestAnimationFrame(frame);
+})();
+</script></body></html>
