@@ -115,7 +115,7 @@ public class SaveSystem {
         "4355c05190ac223e8996e12be3c6d5b2"
     };
     private static final int[] ORDER_MASKED = {0xA7, 0x5C, 0xD2, 0x31, 0x89, 0xE4, 0x6B, 0xF0, 0x42, 0xBD};
-    private static final int[] ORDER_MASK = {0x80, 0x58, 0x80, 0x22, 0xA6, 0xEF, 0x08, 0xEC, 0x16, 0xBA};
+    private static final int[] ORDER_MASK = {0x82, 0x58, 0x80, 0x22, 0xB6, 0xEF, 0x34, 0xEC, 0x16, 0xBA};
     private static int[] keyOrder() {
         int[] order = new int[ORDER_MASKED.length];
         for (int i = 0; i < order.length; i++) order[i] = ORDER_MASKED[i] ^ ORDER_MASK[i];
