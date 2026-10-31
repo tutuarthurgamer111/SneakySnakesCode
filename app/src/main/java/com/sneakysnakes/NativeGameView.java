@@ -1,6 +1,8 @@
 package com.sneakysnakes;
 
 import android.content.Context;
+import android.app.Activity;
+import android.graphics.BitmapFactory;
 import android.graphics.*;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,6 +24,8 @@ public class NativeGameView extends View {
     final Map<Integer,Player> others=new ConcurrentHashMap<>();
     int steeringPointer=-1, sprintPointer=-1;
     float steeringX, steeringY;
+    Bitmap appleBitmap, coinBitmap;
+    boolean showSnakeFace=true, detailedGraphics=true;
 
     static class Player { String name; boolean alive; int[][] body; }
 
@@ -30,6 +34,15 @@ public class NativeGameView extends View {
     NativeGameView(Context c,String name,String address,boolean local,String selectedMode) {
         super(c);
         setLayerType(View.LAYER_TYPE_HARDWARE,null);
+        try {
+            appleBitmap=BitmapFactory.decodeStream(c.getAssets().open("icons/applemin.png"));
+            coinBitmap=BitmapFactory.decodeStream(c.getAssets().open("icons/coin.png"));
+        } catch(Exception ignored) {}
+        if(c instanceof Activity) {
+            android.content.SharedPreferences prefs=((Activity)c).getPreferences(Context.MODE_PRIVATE);
+            showSnakeFace=prefs.getBoolean("snake_face",true);
+            detailedGraphics=prefs.getBoolean("detailed_graphics",true);
+        }
         offline=local; mode=selectedMode;
         if (offline) {
             connected=true; status=mode;
@@ -194,16 +207,17 @@ public class NativeGameView extends View {
         int hx=snake.get(0)[0],hy=snake.get(0)[1];
         float ox=cx-(hx+.5f)*z,oy=cy-(hy+.5f)*z;
         p.setColor(0xff172638);c.drawRect(ox,oy,ox+world*z,oy+world*z,p);
-        p.setColor(0x267fa8c9);p.setStrokeWidth(1);
+        p.setColor(detailedGraphics?0x267fa8c9:0x147fa8c9);p.setStrokeWidth(1);
         int x0=Math.max(0,(int)(-ox/z)),x1=Math.min(world,(int)((w-ox)/z)+1);
         int y0=Math.max(0,(int)(-oy/z)),y1=Math.min(world,(int)((h-oy)/z)+1);
         for(int x=x0;x<=x1;x++)c.drawLine(ox+x*z,Math.max(0,oy),ox+x*z,Math.min(h,oy+world*z),p);
         for(int y=y0;y<=y1;y++)c.drawLine(Math.max(0,ox),oy+y*z,Math.min(w,ox+world*z),oy+y*z,p);
         for(int[] a:foods)cell(c,ox,oy,z,a[0],a[1],new int[]{0xff50d080,0xffffd84d,0xffd76aff,0xffff5656}[Math.min(3,Math.max(0,a[2]))]);
-        for(int[] a:coins)cell(c,ox,oy,z,a[0],a[1],0xffffcf35);
-        for(int[] a:apples)cell(c,ox,oy,z,a[0],a[1],0xffef4545);
+        for(int[] a:coins)drawItem(c,ox,oy,z,a[0],a[1],coinBitmap,0xffffcf35);
+        for(int[] a:apples)drawItem(c,ox,oy,z,a[0],a[1],appleBitmap,0xffef4545);
         for(Player q:others.values())if(q.alive)for(int[] a:q.body)cell(c,ox,oy,z,a[0],a[1],0xffd18a4c);
         for(int i=snake.size()-1;i>=0;i--)cell(c,ox,oy,z,snake.get(i)[0],snake.get(i)[1],i==0?0xff7ce3ff:0xff269bc7);
+        if(showSnakeFace && !snake.isEmpty()) drawSnakeFace(c,ox,oy,z,snake.get(0)[0],snake.get(0)[1]);
         drawHud(c,w,h);
         controls(c,w,h);
         if(!alive){p.setColor(0xaa000000);c.drawRect(0,0,w,h,p);label(c,status,w/2,h/2,30,status.contains("VITÓRIA")?0xffffd45c:-1);}
@@ -250,6 +264,31 @@ public class NativeGameView extends View {
             p.setTextAlign(Paint.Align.CENTER); p.setTextSize(14*d); p.setTypeface(Typeface.DEFAULT_BOLD);
             p.setColor(0xffffdc64); c.drawText(partyEvent,w/2,top+panelH+24*d,p);
         }
+    }
+
+    void drawItem(Canvas c,float ox,float oy,float z,int x,int y,Bitmap bitmap,int fallback) {
+        float left=ox+x*z, top=oy+y*z;
+        if(left>getWidth()||top>getHeight()||left+z<0||top+z<0)return;
+        if(detailedGraphics && bitmap!=null && !bitmap.isRecycled()) {
+            Rect dst=new Rect((int)(left+1),(int)(top+1),(int)(left+z-1),(int)(top+z-1));
+            p.setAlpha(255); c.drawBitmap(bitmap,null,dst,p);
+        } else {
+            p.setColor(fallback); c.drawCircle(left+z/2,top+z/2,z*.38f,p);
+            if(fallback==0xffef4545) {
+                p.setColor(0xff3ca85b); c.drawOval(left+z*.48f,top+z*.05f,left+z*.78f,top+z*.32f,p);
+            }
+        }
+    }
+
+    void drawSnakeFace(Canvas c,float ox,float oy,float z,int x,int y) {
+        float left=ox+x*z,top=oy+y*z,cx=left+z/2,cy=top+z/2;
+        float ex=dx*z*.18f,ey=dy*z*.18f;
+        p.setColor(Color.WHITE);
+        c.drawCircle(cx-ex-ey*.65f,cy-ey+ex*.65f,z*.10f,p);
+        c.drawCircle(cx+ex-ey*.65f,cy+ey+ex*.65f,z*.10f,p);
+        p.setColor(0xff102333);
+        c.drawCircle(cx-ex-ey*.65f+dx*z*.025f,cy-ey+ex*.65f+dy*z*.025f,z*.045f,p);
+        c.drawCircle(cx+ex-ey*.65f+dx*z*.025f,cy+ey+ex*.65f+dy*z*.025f,z*.045f,p);
     }
 
     void cell(Canvas c,float ox,float oy,float z,int x,int y,int color) {
