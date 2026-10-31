@@ -99,7 +99,14 @@ public class NativeGameView extends View {
                         others.clear(); others.putAll(fresh);
                     }
                 } else if(type.equals("foods")) items(o.optJSONArray("foods"),foods,true);
-                else if(type.equals("coin_spawn")) items(o.optJSONArray("coins"),coins,false);
+                else if(type.equals("profile")) {
+                    if(getContext() instanceof Activity) {
+                        Activity activity=(Activity)getContext();
+                        android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
+                        int balance=Math.max(0,o.optInt("coins",0));
+                        prefs.edit().putInt("server_coins",balance).apply();
+                    }
+                } else if(type.equals("coin_spawn")) items(o.optJSONArray("coins"),coins,false);
                 else if(type.equals("apple_spawn")) items(o.optJSONArray("apples"),apples,false);
                 else if(type.equals("respawned")) {
                     int x=o.optInt("x",world/2), y=o.optInt("y",world/2);
@@ -193,7 +200,7 @@ public class NativeGameView extends View {
         }
 
         for(int[] a:coins) if(a[0]==x&&a[1]==y) {
-            coins.remove(a); coinsN++; NativeAudio.play("eat");
+            coins.remove(a); coinsN+=3; NativeAudio.play("eat");
             if(!offline) {
                 send("{\"type\":\"coin_collect\",\"x\":"+x+",\"y\":"+y+"}");
                 if(getContext() instanceof Activity) {
