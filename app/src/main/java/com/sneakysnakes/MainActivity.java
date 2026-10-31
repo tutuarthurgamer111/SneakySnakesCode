@@ -216,44 +216,22 @@ public class MainActivity extends Activity {
 
     void showShop() {
         shopVisible=true;
-        if(shopSocket!=null){shopSocket.close();shopSocket=null;}
-        base("LOJA DE SKINS","Conectando à carteira do servidor...");
-        TextView loading=text("Carregando moedas...",15,0xffffd45c);
-        root.addView(loading,new LinearLayout.LayoutParams(-1,dp(42)));
-        String address=getPreferences(0).getString("last_server_url","");
-        String player=getPreferences(0).getString("last_player_name","Player");
-        if(address.isEmpty()){
-            loading.setText("Entre em um servidor online primeiro para carregar sua carteira.");
-            addButton("VOLTAR",false,()->showHome());
-            return;
+        base("LOJA DE SKINS","Moedas e compras salvas neste celular");
+        renderShop();
+    }
+
+    void saveLocalShop(String skin) {
+        String current=getPreferences(0).getString("server_owned_skins","");
+        if(!current.contains("|"+skin+"|") && !current.equals(skin) &&
+           !Arrays.asList(current.split("\\\\|")).contains(skin)) {
+            current=current.isEmpty()?skin:current+"|"+skin;
         }
-        shopSocket=new NativeSocket(address,msg->runOnUiThread(()->{
-            try{
-                JSONObject o=new JSONObject(msg);
-                String type=o.optString("type");
-                if(type.equals("profile")){
-                    int balance=Math.max(0,o.optInt("coins",0));
-                    JSONArray skins=o.optJSONArray("skins");
-                    StringBuilder owned=new StringBuilder();
-                    if(skins!=null)for(int i=0;i<skins.length();i++){if(owned.length()>0)owned.append("|");owned.append(skins.optString(i));}
-                    getPreferences(0).edit().putInt("server_coins",balance)
-                        .putString("server_owned_skins",owned.toString())
-                        .putString("server_equipped_skin",o.optString("equipped","bright_blue")).apply();
-                    if(shopVisible)renderShop();
-                }else if(type.equals("shop_result")){
-                    Toast.makeText(this,o.optString("message"),Toast.LENGTH_SHORT).show();
-                }
-            }catch(Exception ignored){}
-        }));
-        shopSocket.start();
-        try{
-            JSONObject join=new JSONObject();join.put("type","identify");join.put("name",player);
-            shopSocket.send(join.toString());
-        }catch(Exception ignored){}
+        getPreferences(0).edit().putString("server_owned_skins",current)
+            .putString("server_equipped_skin",skin).apply();
     }
 
     void renderShop(){
-        base("LOJA DE SKINS","Saldo online: "+wallet()+" moedas");
+        base("LOJA DE SKINS","Saldo local: "+wallet()+" moedas");
         ScrollView scroll=new ScrollView(this);
         LinearLayout list=new LinearLayout(this);list.setOrientation(LinearLayout.VERTICAL);
         for(int i=0;i<SKIN_IDS.length;i++){
@@ -265,16 +243,33 @@ public class MainActivity extends Activity {
             LinearLayout.LayoutParams prevLp=new LinearLayout.LayoutParams(dp(38),dp(38));prevLp.rightMargin=dp(10);row.addView(preview,prevLp);
             LinearLayout info=new LinearLayout(this);info.setOrientation(LinearLayout.VERTICAL);
             TextView nm=text(SKIN_NAMES[i],14,Color.WHITE);nm.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
-            TextView price=text(SKIN_COSTS[i]+" moedas",11,0xffffd45c);price.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
+            TextView price=text(owns(id)?"Desbloqueada":SKIN_COSTS[i]+" moedas",11,0xffffd45c);price.setGravity(Gravity.CENTER_VERTICAL|Gravity.LEFT);
             info.addView(nm);info.addView(price);row.addView(info,new LinearLayout.LayoutParams(0,-1,1));
             boolean owned=owns(id);
             Button action=button(owned?(equippedSkin().equals(id)?"EQUIPADA":"EQUIPAR"):"COMPRAR",owned);
             row.addView(action,new LinearLayout.LayoutParams(dp(112),dp(42)));
-            action.setOnClickListener(v->sendShopCommand(owned?"skin_equip":"shop_buy",id));
+            action.setEnabled(!owned || !equippedSkin().equals(id));
+            action.setOnClickListener(v->{
+                if(owned){
+                    getPreferences(0).edit().putString("server_equipped_skin",id).apply();
+                    Toast.makeText(this,SKIN_NAMES[indexOfSkin(id)]+" equipada!",Toast.LENGTH_SHORT).show();
+                }else{
+                    int balance=wallet(),cost=SKIN_COSTS[indexOfSkin(id)];
+                    if(balance<cost){Toast.makeText(this,"Moedas insuficientes.",Toast.LENGTH_SHORT).show();return;}
+                    getPreferences(0).edit().putInt("server_coins",balance-cost).apply();
+                    saveLocalShop(id);
+                    Toast.makeText(this,"Skin comprada e salva neste celular!",Toast.LENGTH_SHORT).show();
+                }
+                renderShop();
+            });
         }
         scroll.addView(list);LinearLayout.LayoutParams slp=new LinearLayout.LayoutParams(-1,0,1);slp.topMargin=dp(6);root.addView(scroll,slp);
-        addButton("ATUALIZAR SALDO",false,()->sendShopCommand("profile",null));
-        addButton("VOLTAR",false,()->{shopVisible=false;if(shopSocket!=null){shopSocket.close();shopSocket=null;}showHome();});
+        addButton("VOLTAR",false,()->{shopVisible=false;showHome();});
+    }
+
+    int indexOfSkin(String id){
+        for(int i=0;i<SKIN_IDS.length;i++)if(SKIN_IDS[i].equals(id))return i;
+        return 0;
     }
 
     void showSettings() {
