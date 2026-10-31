@@ -24,6 +24,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Prepare mobile audio
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          mkdir -p app/src/main/assets/audio
+          for file in background track1 track2 track3 track4 click eat hit; do
+            ffmpeg -y -i "SneakySnakes/Resources/content/sounds/${file}.wav" -vn -codec:a libmp3lame -b:a 112k "app/src/main/assets/audio/${file}.mp3"
+          done
       - name: Build APK
         run: gradle --no-daemon assembleDebug
       - name: Upload APK
