@@ -230,8 +230,16 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
         connected = true;
         statusMsg = "Joining...";
         String skinId = SkinSystem.current().id;
-        send("{\"type\":\"join\",\"name\":\"" + escapeJson(playerName) +
-             "\",\"skin\":\"" + escapeJson(skinId) + "\"}");
+        String playerUuid = saveRef != null ? saveRef.playerUuid : "";
+        String legacyCoins = saveRef != null ? String.valueOf(saveRef.coins) : "0";
+        String unlockedSkins = saveRef != null ? saveRef.unlockedSkins : "";
+        String currentSkinId = saveRef != null ? saveRef.currentSkinId : skinId;
+        send("{\\"type\\":\\"join\\",\\"name\\":\\"" + escapeJson(playerName) +
+             "\\",\\"skin\\":\\"" + escapeJson(skinId) +
+             "\\",\\"playerId\\":\\"" + escapeJson(playerUuid) +
+             "\\",\\"legacyCoins\\":" + legacyCoins +
+             ",\\"unlockedSkins\\":\\"" + escapeJson(unlockedSkins) +
+             "\\",\\"currentSkinId\\":\\"" + escapeJson(currentSkinId) + "\\"}");
     }
 
     void onDisconnected() {
@@ -244,6 +252,10 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
             String type = jsonString(msg, "type");
             if (type == null) return;
             switch (type) {
+                case "profile": {
+                    applyServerProfile(msg);
+                    break;
+                }
                 case "welcome": {
                     myId = jsonInt(msg, "id");
                     int serverTiles = jsonInt(msg, "worldTiles");
@@ -298,9 +310,25 @@ case "state":
      * Adds this session's score and coins to the cumulative SaveSystem totals
      * and writes to disk so progress is never lost.
      */
+    private void applyServerProfile(String msg) {
+        if (saveRef == null) return;
+        saveRef.coins = Math.max(0, jsonInt(msg, "coins"));
+        String unlocked = jsonString(msg, "unlockedSkins");
+        if (unlocked != null) {
+            saveRef.unlockedSkins = unlocked;
+            SkinSystem.deserializeUnlocked(unlocked);
+        }
+        String equipped = jsonString(msg, "currentSkinId");
+        if (equipped != null && !equipped.isEmpty()) {
+            saveRef.currentSkinId = equipped;
+            SkinSystem.setById(equipped);
+        }
+        saveRef.save();
+    }
+
     private void persistSessionStats() {
         if (saveRef == null) return;
-        saveRef.coins    += myCoins;
+        // Server credits and persists every online coin pickup; never add the session total again.
         saveRef.foodsEaten += myApples; // apples count as foods for statistics
         if (myScore > saveRef.highScore) saveRef.highScore = myScore;
         saveRef.deaths++;
@@ -505,7 +533,7 @@ case "state":
 
         // Trail
         SkinSystem.Skin skin = SkinSystem.current();
-        particles.spawnTrail(newHX * TILE + TILE/2f, newHY * TILE + TILE/2f, skin.glow);
+        particles.spawnTrail(wx2sx(newHX * TILE + TILE/2f), wy2sy(newHY * TILE + TILE/2f), skin.glow);
 
         // Coin collision
         synchronized(serverCoins) {
@@ -514,7 +542,7 @@ case "state":
                 if (coin[0] == newHX && coin[1] == newHY) {
                     myCoins++;
                     serverCoins.remove(ci);
-                    particles.spawnFoodCollect(newHX*TILE+TILE/2f, newHY*TILE+TILE/2f, new Color(255,215,0), 8);
+                    particles.spawnFoodCollect(wx2sx(newHX*TILE+TILE/2f), wy2sy(newHY*TILE+TILE/2f), new Color(255,215,0), 8);
                     SoundSystem.play("eat");
                     send("{\"type\":\"coin_collect\",\"x\":" + newHX + ",\"y\":" + newHY + "}");
                 }
@@ -530,7 +558,7 @@ case "state":
                     myScore += APPLE_SCORE;
                     myXp    += APPLE_XP;
                     serverApples.remove(ai);
-                    particles.spawnFoodCollect(newHX*TILE+TILE/2f, newHY*TILE+TILE/2f, APPLE_GLOW_COLOR, 20);
+                    particles.spawnFoodCollect(wx2sx(newHX*TILE+TILE/2f), wy2sy(newHY*TILE+TILE/2f), APPLE_GLOW_COLOR, 20);
                     SoundSystem.play("eat");
                     send("{\"type\":\"apple_collect\",\"x\":" + newHX + ",\"y\":" + newHY + "}");
                     checkLevelUp();
@@ -559,12 +587,12 @@ case "state":
         long now=System.currentTimeMillis();
         if ((now-myLastFood)<=COMBO_WINDOW) myCombo=Math.min(myCombo+1,10); else myCombo=1;
         myLastFood=now;
-        if (myCombo>1) { SoundSystem.play("combo"); lastCombo=myCombo; comboTimer=1.8f; particles.spawnCombo(fx*TILE+TILE/2f,fy*TILE+TILE/2f,myCombo); }
+        if (myCombo>1) { SoundSystem.play("combo"); lastCombo=myCombo; comboTimer=1.8f; particles.spawnCombo(wx2sx(fx*TILE+TILE/2f),wy2sy(fy*TILE+TILE/2f),myCombo); }
         int[] scoreGains={10,30,80,200}, xpGains={5,15,40,100};
         myScore += scoreGains[Math.min(rarity,3)];
         myXp    += xpGains[Math.min(rarity,3)];
         GameState.FoodRarity fr = GameState.FoodRarity.values()[Math.min(rarity,3)];
-        particles.spawnFoodCollect(fx*TILE+TILE/2f,fy*TILE+TILE/2f,fr.glowColor,fr.particleCount);
+        particles.spawnFoodCollect(wx2sx(fx*TILE+TILE/2f),wy2sy(fy*TILE+TILE/2f),fr.glowColor,fr.particleCount);
         checkLevelUp();
     }
 
