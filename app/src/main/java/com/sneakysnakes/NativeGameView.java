@@ -80,18 +80,6 @@ public class NativeGameView extends View {
                     int x=world/2,y=world/2; snake.clear();
                     for(int i=0;i<4;i++) snake.add(new int[]{x-i,y});
                     connected=true; status="Conectado"; NativeAudio.randomTrack();
-                } else if(type.equals("profile")) {
-                    int balance=Math.max(0,o.optInt("coins",0));
-                    JSONArray owned=o.optJSONArray("skins");
-                    StringBuilder list=new StringBuilder();
-                    if(owned!=null)for(int i=0;i<owned.length();i++){if(list.length()>0)list.append("|");list.append(owned.optString(i));}
-                    String equipped=o.optString("equipped","bright_blue");
-                    if(getContext() instanceof Activity) {
-                        ((Activity)getContext()).getPreferences(Context.MODE_PRIVATE).edit()
-                            .putInt("server_coins",balance).putString("server_owned_skins",list.toString())
-                            .putString("server_equipped_skin",equipped).apply();
-                    }
-                    skinId=equipped;
                 } else if(type.equals("state")) {
                     JSONArray a=o.optJSONArray("players");
                     if(a!=null) {
@@ -173,8 +161,15 @@ public class NativeGameView extends View {
 
         for(int[] a:coins) if(a[0]==x&&a[1]==y) {
             coins.remove(a); coinsN++; NativeAudio.play("eat");
-            if(!offline)send("{\"type\":\"coin_collect\",\"x\":"+x+",\"y\":"+y+"}");
-            else spawnLocalCoin();
+            if(!offline) {
+                send("{\"type\":\"coin_collect\",\"x\":"+x+",\"y\":"+y+"}");
+                if(getContext() instanceof Activity) {
+                    Activity activity=(Activity)getContext();
+                    android.content.SharedPreferences prefs=activity.getPreferences(Context.MODE_PRIVATE);
+                    int balance=Math.max(0,prefs.getInt("server_coins",0));
+                    prefs.edit().putInt("server_coins",balance+1).apply();
+                }
+            } else spawnLocalCoin();
             break;
         }
         for(int[] a:apples) if(a[0]==x&&a[1]==y) {
