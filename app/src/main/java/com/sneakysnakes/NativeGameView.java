@@ -275,6 +275,7 @@ public class NativeGameView extends View {
             alive=true;score=0;dx=1;dy=0;nx=1;ny=0;status="Vivo";
             NativeAudio.randomTrack();
         } else {
+            status="Solicitando respawn...";
             send("{\"type\":\"respawn\"}");
         }
         invalidate();
@@ -441,7 +442,7 @@ public class NativeGameView extends View {
 
         if(action==MotionEvent.ACTION_DOWN || action==MotionEvent.ACTION_POINTER_DOWN) {
             float x=e.getX(index), y=e.getY(index);
-            if(action==MotionEvent.ACTION_DOWN && hitRespawn(x,y)) { respawn(); return true; }
+            if(hitRespawn(x,y)) { respawn(); return true; }
             if(!alive)return true;
             if(Math.hypot(x-runX,y-runY)<=runR+20*d) {
                 sprintPointer=pointer; sprint=true;
