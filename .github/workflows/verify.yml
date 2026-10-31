@@ -1,0 +1,24 @@
+name: Verify SneakySnakes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Compile game
+        run: |
+          cd src
+          javac -cp . *.java
+      - name: Check multiplayer server syntax
+        run: node --check SneakySnakes/server/server.js
