@@ -247,7 +247,7 @@ public class MainActivity extends Activity {
         }));
         shopSocket.start();
         try{
-            JSONObject join=new JSONObject();join.put("type","join");join.put("name",player);join.put("skin",equippedSkin());
+            JSONObject join=new JSONObject();join.put("type","identify");join.put("name",player);
             shopSocket.send(join.toString());
         }catch(Exception ignored){}
     }
