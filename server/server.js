@@ -113,7 +113,7 @@ function broadcastAll(obj) { const msg = JSON.stringify(obj); players.forEach(p 
 function buildStatePayload() {
     const plist = [];
     players.forEach(p => plist.push({ id: p.id, name: p.name, skin: p.skin, body: p.body, dir: p.dir, alive: p.alive }));
-    return { type: 'state', uptime: getUptime(), players: plist };
+    return { type: 'state', uptime: getUptime(), worldTiles: WORLD_TILES, players: plist };
 }
 
 function checkPlayerCollisions(moverId, hx, hy) {
@@ -229,7 +229,7 @@ const id = nextId++;
     const player = { id, ws, name: 'Player' + id, skin: 'bright_blue', body: [], dir: [1, 0], alive: false, score: 0, coins: 0 };
     players.set(id, player);
 
-    send(ws, { type: 'welcome', id });
+    send(ws, { type: 'welcome', id, worldTiles: WORLD_TILES });
     send(ws, { type: 'foods', foods: foods.map(f => [f.x, f.y, f.rarity]) });
     send(ws, { type: 'coin_spawn', coins: coins.map(c => [c.x, c.y]) });
     
