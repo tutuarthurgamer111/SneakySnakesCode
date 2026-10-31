@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.Scanner;
+import java.util.UUID;
 
 /**
  * SaveSystem - Handles all persistence in JSON format.
@@ -20,6 +21,7 @@ public class SaveSystem {
     public String unlockedSkins  = "";
     public String achievements   = "";
     public String currentSkinId  = "bright_green";
+    public String playerUuid     = UUID.randomUUID().toString();
 
     public void load() {
         try {
@@ -41,6 +43,8 @@ public class SaveSystem {
             unlockedSkins = parseString(json,"UnlockedSkins", "");
             achievements  = parseString(json,"Achievements",  "");
             currentSkinId = parseString(json,"CurrentSkin",   "bright_green");
+            playerUuid    = parseString(json,"PlayerUUID",     playerUuid);
+            if (playerUuid == null || playerUuid.trim().isEmpty()) playerUuid = UUID.randomUUID().toString();
         } catch (Exception e) {
             System.err.println("[SaveSystem] Load failed: " + e.getMessage());
         }
@@ -62,7 +66,8 @@ public class SaveSystem {
             w.println("  \"Coins\":"          + coins         + ",");
             w.println("  \"UnlockedSkins\":\"" + escape(unlockedSkins) + "\",");
             w.println("  \"Achievements\":\""  + escape(achievements)  + "\",");
-            w.println("  \"CurrentSkin\":\""   + escape(currentSkinId) + "\"");
+            w.println("  \"CurrentSkin\":\""   + escape(currentSkinId) + "\",");
+            w.println("  \"PlayerUUID\":\""    + escape(playerUuid) + "\"");
             w.println("}");
             w.close();
         } catch (Exception e) {
