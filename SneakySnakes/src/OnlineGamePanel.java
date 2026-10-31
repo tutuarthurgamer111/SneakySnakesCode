@@ -339,6 +339,8 @@ case "state":
         }
         int best=jsonInt(profile,"highScore");
         if(best>saveRef.highScore)saveRef.highScore=best;
+        SkinSystem.checkUnlocks(saveRef.highScore);
+        saveRef.unlockedSkins=SkinSystem.serializeUnlocked();
         saveRef.save();
     }
 
