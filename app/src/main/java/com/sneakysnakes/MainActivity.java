@@ -221,7 +221,7 @@ public class MainActivity extends Activity {
                 if(servers!=null){ArrayList<String> valid=new ArrayList<>();
                     for(int i=0;i<servers.length();i++){JSONObject s=servers.optJSONObject(i);if(s==null)continue;
                         String h=s.optString("host","").trim();int p=s.optInt("port",3000);
-                        if(!h.isEmpty()&&!h.contains("/")&&!h.contains(":")&&p>0&&p<=65535)valid.add(h+"|"+p);
+                        if(!h.isEmpty()&&!h.contains("/")&&!h.contains(":")&&p>0&&p<=65535)valid.add(h+"|"+p+"|"+(s.optBoolean("secure",false)||p==443));
                     }
                     count=valid.size();if(!valid.isEmpty())chosen=valid.get(new Random().nextInt(valid.size()));
                 }
@@ -230,8 +230,9 @@ public class MainActivity extends Activity {
             runOnUiThread(()->{
                 b.setEnabled(true);b.setText("ENTRAR EM SERVIDOR OFICIAL ALEATÓRIO");
                 if(selected==null){Toast.makeText(this,problem==null?"Nenhum servidor oficial disponível.":"Falha ao buscar: "+problem,Toast.LENGTH_LONG).show();return;}
-                String[] v=selected.split("\\|",2);
-                String address="ws://"+v[0]+":"+v[1];
+                String[] v=selected.split("\\|",3);
+                boolean tls=v.length>2&&Boolean.parseBoolean(v[2]);
+                String address=(tls?"wss://":"ws://")+v[0]+":"+v[1];
                 getPreferences(0).edit().putString("last_player_name",playerName()).putString("last_server_url",address).apply();
                 launchGame(playerName(),address,false,"ONLINE");
             });
