@@ -584,7 +584,19 @@ case "state":
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        g.drawImage(buffer, 0, 0, getWidth(), getHeight(), null);
+        drawAspectFit(g, buffer);
+    }
+
+    private void drawAspectFit(Graphics graphics, BufferedImage image) {
+        Graphics2D g2 = (Graphics2D) graphics.create();
+        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
+        int drawW = (int) Math.round(WIDTH * scale);
+        int drawH = (int) Math.round(HEIGHT * scale);
+        int x = (getWidth() - drawW) / 2;
+        int y = (getHeight() - drawH) / 2;
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(image, x, y, drawW, drawH, null);
+        g2.dispose();
     }
 
     private void drawToBuffer() {
@@ -956,12 +968,22 @@ private String serverUptime = "Server Est: 0s";
     @Override public void keyReleased(KeyEvent e) {}
     @Override public void keyTyped(KeyEvent e) {}
 
+    private int[] scaleMouseCoords(int mx, int my) {
+        double scale = Math.min(getWidth() / (double) WIDTH, getHeight() / (double) HEIGHT);
+        if (scale <= 0) return new int[]{-1, -1};
+        int drawW = (int) Math.round(WIDTH * scale);
+        int drawH = (int) Math.round(HEIGHT * scale);
+        int offsetX = (getWidth() - drawW) / 2;
+        int offsetY = (getHeight() - drawH) / 2;
+        return new int[]{(int)((mx-offsetX)/scale), (int)((my-offsetY)/scale)};
+    }
+
     @Override public void mousePressed(MouseEvent e)  { if(e.getButton()==MouseEvent.BUTTON1) sprinting=true; }
     @Override public void mouseReleased(MouseEvent e) { if(e.getButton()==MouseEvent.BUTTON1) sprinting=false; }
 
     @Override
     public void mouseClicked(MouseEvent e) {
-        int mx=(int)(e.getX()*(float)WIDTH/getWidth()), my=(int)(e.getY()*(float)HEIGHT/getHeight());
+        int mx=scaleMouseCoords(e.getX(), e.getY())[0], my=scaleMouseCoords(e.getX(), e.getY())[1];
         if (deadOverlay) {
             int pw=360,ph=220,px=(WIDTH-pw)/2,py=(HEIGHT-ph)/2;
             if (inRect(mx,my,px+pw/2-120,py+155,110,38)) { respawn(); return; }
@@ -975,7 +997,7 @@ private String serverUptime = "Server Est: 0s";
 
     @Override
     public void mouseMoved(MouseEvent e) {
-        int mx=(int)(e.getX()*(float)WIDTH/getWidth()), my=(int)(e.getY()*(float)HEIGHT/getHeight());
+        int mx=scaleMouseCoords(e.getX(), e.getY())[0], my=scaleMouseCoords(e.getX(), e.getY())[1];
         if (deadOverlay) {
             int pw=360,ph=220,px=(WIDTH-pw)/2,py=(HEIGHT-ph)/2;
             respawnHover=inRect(mx,my,px+pw/2-120,py+155,110,38);
