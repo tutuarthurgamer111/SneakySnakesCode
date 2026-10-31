@@ -102,13 +102,52 @@ function partyTick(){partyTimer++;if(partyTimer%220===0){const events=['DOUBLE P
 function endGame(win){alive=false;save.coins+=coins;save.games++;save.foods+=foodsEaten;if(!win)save.deaths++;save.high=Math.max(save.high,score);persist();document.getElementById('endTitle').textContent=win?'YOU WIN!':'GAME OVER';document.getElementById('endStats').innerHTML='Score: '+score+'<br>Best: '+save.high+'<br>Level: '+level+'<br>Foods: '+foodsEaten+'<br>Coins earned: +'+coins;showScreen('endScreen')}
 function pauseGame(){if(!alive)return;paused=true;showScreen('pauseScreen')}
 function resumeGame(){paused=false;lastTick=performance.now();showScreen('game')}
-function draw(){const dpr=Math.min(devicePixelRatio||1,2),w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}ctx.setTransform(dpr*w/W,0,0,dpr*h/H,0,0);ctx.fillStyle=night?'#070b15':'#111a2b';ctx.fillRect(0,0,W,H);ctx.strokeStyle=night?'#16334a':'#ffffff12';ctx.lineWidth=1;for(let x=0;x<=W;x+=T){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=0;y<=H;y+=T){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}if(screen==='game'||alive){const colors=['#ff5f6d','#f3a83b','#a878ff','#ffe45e'];foods.forEach(f=>{ctx.fillStyle=colors[f.rarity];ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(f.x*T+T/2,f.y*T+T/2,6+f.rarity*1.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0});const skin=skins.find(s=>s.id===save.skin)||skins[0];snake.forEach((s,i)=>{ctx.fillStyle=skin.color;ctx.globalAlpha=i===0?1:Math.max(.45,1-i/snake.length*.5);ctx.beginPath();ctx.roundRect(s.x*T+1,s.y*T+1,T-2,T-2,5);ctx.fill();if(i===0){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(s.x*T+14,s.y*T+6,2.5,0,7);ctx.arc(s.x*T+14,s.y*T+14,2.5,0,7);ctx.fill()}});ctx.globalAlpha=1}if(screen==='menu'){ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 50px Arial';ctx.fillText('SneakySnakes',400,100);ctx.font='18px Arial';ctx.fillStyle='#9fd8ff';ctx.fillText('Choose a mode to play',400,135)}}
+function draw(){
+ const dpr=Math.min(devicePixelRatio||1,2),w=canvas.clientWidth,h=canvas.clientHeight;
+ if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr)}
+ ctx.setTransform(dpr*w/W,0,0,dpr*h/H,0,0);
+ ctx.fillStyle=night?'#070b15':'#111a2b';ctx.fillRect(0,0,W,H);
+ const tile=online?Math.min(W/42,H/32):T;
+ const head=snake[0]||{x:20,y:15};
+ const ox=online?W/2-head.x*tile-tile/2:0;
+ const oy=online?H/2-head.y*tile-tile/2:0;
+ const toX=x=>ox+x*tile,toY=y=>oy+y*tile;
+ ctx.strokeStyle=night?'#16334a':'#ffffff12';ctx.lineWidth=1;
+ for(let x=0;x<=W;x+=tile){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+ for(let y=0;y<=H;y+=tile){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ if(screen==='game'||alive){
+   const colors=['#ff5f6d','#f3a83b','#a878ff','#ffe45e'];
+   const drawFood=(f)=>{const x=online?f[0]:f.x,y=online?f[1]:f.y,rarity=online?(f[2]||0):f.rarity;ctx.fillStyle=colors[rarity];ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(toX(x)+tile/2,toY(y)+tile/2,Math.max(3,tile*.3+rarity),0,Math.PI*2);ctx.fill();ctx.shadowBlur=0};
+   (online?serverFoods:foods).forEach(drawFood);
+   if(online)serverCoins.forEach(c=>{ctx.fillStyle='#ffd34e';ctx.beginPath();ctx.arc(toX(c[0])+tile/2,toY(c[1])+tile/2,tile*.22,0,Math.PI*2);ctx.fill()});
+   const skin=skins.find(s=>s.id===save.skin)||skins[0];
+   const drawBody=(body,color)=>body.forEach((s,i)=>{ctx.fillStyle=color;ctx.globalAlpha=i===0?1:Math.max(.45,1-i/body.length*.5);ctx.beginPath();ctx.roundRect(toX(s.x)+1,toY(s.y)+1,tile-2,tile-2,Math.max(2,tile*.25));ctx.fill();if(i===0){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(toX(s.x)+tile*.7,toY(s.y)+tile*.3,Math.max(1,tile*.12),0,7);ctx.arc(toX(s.x)+tile*.7,toY(s.y)+tile*.7,Math.max(1,tile*.12),0,7);ctx.fill()}});
+   if(online){Object.values(players).forEach(p=>{if(p.id!==serverId&&p.alive)drawBody((p.body||[]).map(b=>({x:b[0],y:b[1]})), '#ff9b52')})}
+   drawBody(snake,skin.color);ctx.globalAlpha=1;
+ }
+ if(screen==='menu'){ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='bold 50px Arial';ctx.fillText('SneakySnakes',400,100);ctx.font='18px Arial';ctx.fillStyle='#9fd8ff';ctx.fillText('Choose a mode to play',400,135)}
+}
 function updateHud(){document.getElementById('hud').innerHTML='Score: '+(online?onlineScore:score)+'<br>Length: '+(online?snake.length:snake.length)+'<br>Level: '+level+'<br>Coins: '+(online?onlineCoins:coins)+'<br>'+currentMode.toUpperCase();}
-function loop(t){if(screen==='game'&&alive&&!paused&&!online){const rate=sprint?70:115;acc+=Math.min(50,t-lastTick);lastTick=t;while(acc>=rate){move();acc-=rate}}else lastTick=t;draw();if(screen==='game')updateHud();requestAnimationFrame(loop)}
+function loop(t){if(screen==='game'&&alive&&!paused){const rate=online?120:(sprint?70:115);acc+=Math.min(50,t-lastTick);lastTick=t;while(acc>=rate){if(online)onlineMove();else move();acc-=rate}}else lastTick=t;draw();if(screen==='game')updateHud();requestAnimationFrame(loop)}
 function showEndMessage(msg){showToast(msg)}
 function stopOnline(){if(ws){try{ws.close()}catch(e){}ws=null}online=false;players={}}
-function connectOnline(){const address=document.getElementById('serverAddress').value.trim(),name=document.getElementById('playerName').value.trim().slice(0,24)||'Player';if(!/^wss?:\/\//.test(address)){showToast('Use ws:// or wss://');return}save.name=name;persist();stopOnline();ws=new WebSocket(address);showToast('Connecting...');ws.onopen=()=>{online=true;currentMode='online';alive=true;snake=[{x:32,y:32},{x:31,y:32},{x:30,y:32},{x:29,y:32}];direction={x:1,y:0};next={x:1,y:0};onlineScore=0;onlineCoins=0;ws.send(JSON.stringify({type:'join',name,skin:save.skin}));showScreen('game');showToast('Connected!')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}if(m.type==='joined'){serverId=m.id;worldTiles=m.worldTiles||64;snake=Array.from({length:4},(_,i)=>({x:32-i,y:32}))}if(m.type==='state'){players={};(m.players||[]).forEach(p=>{players[p.id]=p;if(p.id===serverId){snake=(p.body||[]).map(b=>({x:b[0],y:b[1]}));onlineScore=p.score||0}})}if(m.type==='foods')serverFoods=m.foods||[];if(m.type==='coin_spawn')serverCoins=m.coins||[];if(m.type==='player_died'&&m.id===serverId){alive=false;save.games++;save.deaths++;save.coins+=onlineCoins;persist();document.getElementById('endTitle').textContent='YOU DIED';document.getElementById('endStats').textContent='Online session ended. Score: '+onlineScore;showScreen('endScreen')} };ws.onerror=()=>showToast('Connection error');ws.onclose=()=>{if(online)showToast('Disconnected');online=false};}
-function onlineMove(){if(!ws||ws.readyState!==1||!snake.length)return;const h={x:snake[0].x+direction.x,y:snake[0].y+direction.y};if(h.x<0||h.y<0||h.x>=worldTiles||h.y>=worldTiles){ws.send(JSON.stringify({type:'die',reason:'border'}));return}snake.unshift(h);snake.pop();ws.send(JSON.stringify({type:'move',dir:[direction.x,direction.y],head:[h.x,h.y],body:snake.map(p=>[p.x,p.y])}));}
+function connectOnline(){const address=document.getElementById('serverAddress').value.trim(),name=document.getElementById('playerName').value.trim().slice(0,24)||'Player';if(!/^wss?:\/\//.test(address)){showToast('Use ws:// or wss://');return}save.name=name;persist();stopOnline();ws=new WebSocket(address);showToast('Connecting...');ws.onopen=()=>{online=true;currentMode='online';alive=true;snake=[{x:32,y:32},{x:31,y:32},{x:30,y:32},{x:29,y:32}];direction={x:1,y:0};next={x:1,y:0};onlineScore=0;onlineCoins=0;ws.send(JSON.stringify({type:'join',name,skin:save.skin}));showScreen('game');showToast('Connected!')};ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}if(m.type==='welcome'){serverId=m.id;worldTiles=64;snake=Array.from({length:4},(_,i)=>({x:32-i,y:32}));showToast('Joined server #'+serverId)}if(m.type==='state'){players={};(m.players||[]).forEach(p=>{players[p.id]=p;if(p.id===serverId){snake=(p.body||[]).map(b=>({x:b[0],y:b[1]}));onlineScore=p.score||0;onlineCoins=p.coins||onlineCoins;alive=!!p.alive}})}if(m.type==='foods')serverFoods=m.foods||[];if(m.type==='coin_spawn')serverCoins=m.coins||[];if(m.type==='player_died'&&m.id===serverId){alive=false;save.games++;save.deaths++;save.coins+=onlineCoins;persist();document.getElementById('endTitle').textContent='YOU DIED';document.getElementById('endStats').textContent='Online session ended. Score: '+onlineScore;showScreen('endScreen')} };ws.onerror=()=>showToast('Connection error');ws.onclose=()=>{if(online)showToast('Disconnected');online=false};}
+function onlineMove(){
+ if(!ws||ws.readyState!==1||!snake.length||!alive)return;
+ direction=next;
+ const h={x:snake[0].x+direction.x,y:snake[0].y+direction.y};
+ if(h.x<0||h.y<0||h.x>=worldTiles||h.y>=worldTiles||snake.slice(0,-1).some(p=>p.x===h.x&&p.y===h.y)){
+   ws.send(JSON.stringify({type:'die',reason:'collision'}));return;
+ }
+ for(const p of Object.values(players)){
+   if(p.id===serverId||!p.alive)continue;
+   if((p.body||[]).some(b=>b[0]===h.x&&b[1]===h.y)){ws.send(JSON.stringify({type:'die',reason:'player'}));return}
+ }
+ snake.unshift(h);snake.pop();
+ const ci=serverCoins.findIndex(c=>c[0]===h.x&&c[1]===h.y);
+ if(ci>=0){serverCoins.splice(ci,1);onlineCoins++;ws.send(JSON.stringify({type:'coin_collect',x:h.x,y:h.y}))}
+ ws.send(JSON.stringify({type:'move',dir:[direction.x,direction.y],head:[h.x,h.y],body:snake.map(p=>[p.x,p.y])}));
+}
 document.querySelectorAll('[data-dir]').forEach(b=>{const d=b.dataset.dir;b.addEventListener('pointerdown',e=>{e.preventDefault();setDirection(d)})});
 document.getElementById('sprint').addEventListener('pointerdown',()=>{sprint=true});['pointerup','pointercancel','pointerleave'].forEach(ev=>document.getElementById('sprint').addEventListener(ev,()=>sprint=false));
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='arrowup'||k==='w')setDirection('up');if(k==='arrowdown'||k==='s')setDirection('down');if(k==='arrowleft'||k==='a')setDirection('left');if(k==='arrowright'||k==='d')setDirection('right');if(k==='escape'){if(screen==='game')pauseGame();else if(screen!=='menu')goMenu()}});
