@@ -569,7 +569,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         FontMetrics sfm = g.getFontMetrics();
         int skinStrX = (WIDTH - sfm.stringWidth(skinStr))/2;
         g.drawString(skinStr, skinStrX, 444);
-        if(AccountSession.token().isEmpty()){g.setFont(new Font("Arial",Font.PLAIN,12));g.setColor(new Color(170,195,220,190));String hint="Para criar uma conta, vá em configurações e Conta";g.drawString(hint,(WIDTH-g.getFontMetrics().stringWidth(hint))/2,475);}
+        if(AccountSession.token().isEmpty()){g.setFont(new Font("Arial",Font.PLAIN,12));g.setColor(new Color(170,195,220,190));String hint="Para criar uma conta, clique em Conta.";g.drawString(hint,(WIDTH-g.getFontMetrics().stringWidth(hint))/2,475);}
 
         drawMenuStats(g);
         drawSkinPreview(g, 640, 195, SkinSystem.current());
