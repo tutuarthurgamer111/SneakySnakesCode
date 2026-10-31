@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     String equippedSkin(){return getPreferences(0).getString("server_equipped_skin","bright_blue");}
     int wallet(){return getPreferences(0).getInt("server_coins",0);}
     boolean owns(String id){
-        if(id.equals("bright_green"))return true;
+        if(id.equals("bright_green")||id.equals("bright_blue"))return true;
         if(id.equals("cocoa")||id.equals("bright_blue")||id.equals("lilac")||id.equals("hurricane")||id.equals("violet")||id.equals("bright_red")||id.equals("yeller")||id.equals("really_blue")||id.equals("really_red")||id.equals("gold")||id.equals("neon_green")||id.equals("neon_pink")||id.equals("neon_blue")||id.equals("rainbow")) {
             return getPreferences(0).getInt("skin_high_score",0)>=SKIN_UNLOCK_SCORES[indexOfSkin(id)];
         }
