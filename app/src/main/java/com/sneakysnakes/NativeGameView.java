@@ -14,7 +14,8 @@ public class NativeGameView extends View {
     static final int TILE = 16;
     final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     NativeSocket net;
-    int world=64, id=-1, dx=1, dy=0, nx=1, ny=0, score=0, coinsN=0, applesN=0, xp=0, level=1, fps=0, frameCount=0;
+    int world=64, id=-1, dx=1, dy=0, nx=1, ny=0, score=0, coinsN=0, applesN=0, xp=0, level=1, fps=0, frameCount=0, comboN=1;
+    long lastFoodAt=0;
     boolean connected=false, alive=true, sprint=false, offline=false, doublePoints=false;
     String mode="ONLINE", partyEvent="", status="Conectando...";
     int partyMoves=0, partyEventTicks=0;
@@ -236,6 +237,9 @@ public class NativeGameView extends View {
             int r=Math.min(3,Math.max(0,a[2]));
             grow=new int[]{1,3,8,20}[r];
             score+=new int[]{10,30,80,200}[r]*(doublePoints?2:1); addXp(new int[]{5,15,40,100}[r]);
+            long nowFood=System.currentTimeMillis();
+            comboN=(nowFood-lastFoodAt<=3000)?Math.min(10,comboN+1):1;
+            lastFoodAt=nowFood;
             foods.remove(a); NativeAudio.play("eat"); break;
         }
         int[] tail=snake.get(snake.size()-1);
@@ -375,13 +379,21 @@ public class NativeGameView extends View {
         if(offline) {
             int x=world/2,y=world/2;snake.clear();
             for(int i=0;i<4;i++)snake.add(new int[]{x-i,y});
-            alive=true;score=0;dx=1;dy=0;nx=1;ny=0;status="Vivo";
+            alive=true;score=0;comboN=1;lastFoodAt=0;dx=1;dy=0;nx=1;ny=0;status="Vivo";
             NativeAudio.randomTrack();
         } else {
             status="Solicitando respawn...";
             send("{\"type\":\"respawn\"}");
         }
         invalidate();
+    }
+
+    int displayCoins() {
+        if(!offline && getContext() instanceof Activity) {
+            Activity activity=(Activity)getContext();
+            return Math.max(0,activity.getPreferences(Context.MODE_PRIVATE).getInt("server_coins",coinsN));
+        }
+        return coinsN;
     }
 
     void drawHud(Canvas c,float w,float h) {
@@ -393,8 +405,8 @@ public class NativeGameView extends View {
         String[] lines={
             "Score:   "+score,
             "Level:   "+level,
-            "Combo:   x1",
-            "Coins:   "+coinsN,
+            "Combo:   x"+(System.currentTimeMillis()-lastFoodAt>3000?1:comboN),
+            "Coins:   "+displayCoins(),
             "Apples:  "+applesN,
             "Server Est: "+((System.currentTimeMillis()-startedAt)/1000)+"s",
             "Players: "+(others.size()+1),
