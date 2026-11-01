@@ -24,6 +24,7 @@ public class MainActivity extends Activity {
     EditText accountUser, accountPass, accountNick;
     boolean shopVisible=false;
     boolean resolvingAccountServer=false;
+    final String guestPlayerName="Guest"+(100000+new Random().nextInt(900000));
     // Shared catalog: identical IDs, score unlocks and coin prices to the PC version.
     static final String[] SKIN_IDS={"cocoa","bright_blue","lilac","hurricane","violet","bright_red","bright_green","yeller","really_blue","really_red","gold","neon_green","neon_pink","neon_blue","rainbow","obsidian","lava","ice","midnight","toxic","rich","tex_snake","tex_pixel","tex_neon_grid","tex_galaxy","tex_fire","tex_tomato"};
     static final String[] SKIN_NAMES={"Cocoa","Blue","Lilac","Grey","Violet","Red","Green","Yellow","Bright Blue","Bright Red","Gold","Classic","Neon Pink","Neon Blue","Rainbow","Obsidian","Lava","Ice Crystal","Midnight","Toxic","Rich","Snake Scale","Pixel Camo","Neon Grid","Galaxy","Fire","Tomatoes"};
@@ -171,8 +172,9 @@ public class MainActivity extends Activity {
 
     void showOnline() {
         base("JOGAR ON-LINE","Entre em um servidor oficial ou informe um endereço");
-        name=edit("Seu nome","Player",false);
-        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,dp(48)); np.topMargin=dp(6); root.addView(name,np);
+        String visibleName=playerName();
+        TextView nameLabel=text((getPreferences(0).getString("account_token","").isEmpty()?"Visitante: ":"Conta: ")+visibleName,13,0xff8fe0ad);
+        LinearLayout.LayoutParams np=new LinearLayout.LayoutParams(-1,dp(34)); np.topMargin=dp(6); root.addView(nameLabel,np);
         TextView divider=text("SERVIDOR OFICIAL",12,0xff83a9c5);
         LinearLayout.LayoutParams dp1=new LinearLayout.LayoutParams(-1,dp(22)); dp1.topMargin=dp(7); root.addView(divider,dp1);
         Button random=button("ENTRAR EM SERVIDOR OFICIAL ALEATÓRIO",true);
@@ -192,8 +194,12 @@ public class MainActivity extends Activity {
     }
 
     String playerName() {
-        String n=name==null?"Player":name.getText().toString().trim();
-        return n.isEmpty()?"Player":n;
+        String token=getPreferences(0).getString("account_token","");
+        if(!token.isEmpty()) {
+            String nickname=getPreferences(0).getString("account_nickname","");
+            if(!nickname.trim().isEmpty())return nickname.trim();
+        }
+        return guestPlayerName;
     }
 
     void startOnline() {
@@ -268,8 +274,72 @@ public class MainActivity extends Activity {
             getPreferences(0).edit().remove("account_token").remove("account_nickname").remove("server_owned_skins").putInt("server_coins",0).apply();
             Toast.makeText(this,"Sessão removida deste aparelho.",Toast.LENGTH_SHORT).show();showAccount();
         });
+        if(!getPreferences(0).getString("account_token","").isEmpty())
+            addButton("ALTERAR NICKNAME (100 MOEDAS)",false,()->changeNicknameRemote());
         addButton("DELETAR CONTA",false,()->confirmDeleteAccount());
         addButton("VOLTAR",false,()->showHome());
+    }
+
+    void changeNicknameRemote() {
+        if(getPreferences(0).getString("account_token","").isEmpty()) {
+            Toast.makeText(this,"Entre na conta antes de alterar o nickname.",Toast.LENGTH_LONG).show();return;
+        }
+        String url=getPreferences(0).getString("last_server_url","");
+        if(!url.startsWith("wss://")){ensureOfficialAccountServer(()->changeNicknameRemote());return;}
+        EditText input=edit("Novo nickname (até 24 caracteres)",getPreferences(0).getString("account_nickname",""),false);
+        new AlertDialog.Builder(this).setTitle("Alterar nickname")
+            .setMessage("A alteração custa 100 moedas.")
+            .setView(input).setNegativeButton("Cancelar",null)
+            .setPositiveButton("ALTERAR",(dialog,which)->sendNicknameChange(input.getText().toString().trim()))
+            .show();
+    }
+
+    void sendNicknameChange(String nickname) {
+        if(nickname.isEmpty()||nickname.codePointCount(0,nickname.length())>24) {
+            Toast.makeText(this,"Use um nickname de 1 a 24 caracteres.",Toast.LENGTH_LONG).show();return;
+        }
+        String url=getPreferences(0).getString("last_server_url","");
+        String token=getPreferences(0).getString("account_token","");
+        if(!url.startsWith("wss://")||token.isEmpty())return;
+        if(shopSocket!=null)shopSocket.close();
+        final boolean[] sent={false};
+        shopSocket=new NativeSocket(url,raw->{
+            try {
+                JSONObject response=new JSONObject(raw);
+                String type=response.optString("type");
+                if(type.equals("auth_resumed")&&!sent[0]) {
+                    sent[0]=true;
+                    JSONObject request=new JSONObject();request.put("type","auth_nickname_change");request.put("nickname",nickname);
+                    shopSocket.send(request.toString());
+                } else if(type.equals("nickname_result")) {
+                    boolean accepted=response.optBoolean("accepted",false);
+                    JSONObject profile=response.optJSONObject("profile");
+                    if(profile!=null)saveAccountProfile(profile);
+                    String code=response.optString("code","");
+                    runOnUiThread(()->{
+                        if(accepted)Toast.makeText(this,"Nickname alterado! 100 moedas cobradas.",Toast.LENGTH_LONG).show();
+                        else {
+                            String message=code.equals("INSUFFICIENT_COINS")?"Você precisa de 100 moedas.":
+                                code.equals("NICKNAME_TAKEN")?"Esse nickname já está em uso.":
+                                code.equals("SAME_NICKNAME")?"Esse já é seu nickname atual.":
+                                code.equals("INVALID_NICKNAME")?"Nickname inválido.":"Não foi possível alterar: "+code;
+                            Toast.makeText(this,message,Toast.LENGTH_LONG).show();
+                        }
+                        if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+                        showAccount();
+                    });
+                } else if(type.equals("auth_error")||type.equals("account_error")) {
+                    String code=response.optString("code","ACCOUNT_ERROR");
+                    runOnUiThread(()->{
+                        Toast.makeText(this,"Conta: "+code,Toast.LENGTH_LONG).show();
+                        if(shopSocket!=null){shopSocket.close();shopSocket=null;}
+                    });
+                }
+            } catch(Exception ignored) {}
+        });
+        shopSocket.start();
+        try { JSONObject auth=new JSONObject();auth.put("type","auth_resume");auth.put("token",token);shopSocket.send(auth.toString()); }
+        catch(Exception e) { shopSocket.close();shopSocket=null;Toast.makeText(this,"Erro ao conectar à conta.",Toast.LENGTH_LONG).show(); }
     }
 
     void confirmDeleteAccount() {
