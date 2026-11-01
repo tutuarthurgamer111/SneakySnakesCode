@@ -219,6 +219,85 @@ public final class AccountSession {
         return true;
     }
 
+    public static boolean changeNickname(Component parent, String serverUrl, String requestedNickname, SaveSystem save) {
+        String currentToken = token();
+        String desired = requestedNickname == null ? "" : requestedNickname.trim();
+        if (currentToken.isEmpty()) {
+            JOptionPane.showMessageDialog(parent, "Entre na sua conta antes de alterar o nickname.",
+                "Conta necessária", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        if (serverUrl == null || !serverUrl.startsWith("wss://")) {
+            JOptionPane.showMessageDialog(parent, "A alteração exige uma conexão segura (WSS).",
+                "Conexão segura necessária", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        if (desired.isEmpty() || desired.codePointCount(0, desired.length()) > 24) {
+            JOptionPane.showMessageDialog(parent, "O nickname deve ter entre 1 e 24 caracteres.",
+                "Nickname inválido", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+
+        CountDownLatch done = new CountDownLatch(1);
+        boolean[] success = {false};
+        String[] error = {null};
+        final WebSocketClient[] client = new WebSocketClient[1];
+        client[0] = new WebSocketClient(serverUrl, message -> {
+            String type = jsonString(message, "type");
+            if ("auth_resumed".equals(type)) {
+                client[0].send("{\\"type\\":\\"auth_nickname_change\\",\\"nickname\\":\\""+jsonEscape(desired)+"\\"}");
+            } else if ("nickname_result".equals(type)) {
+                success[0] = message.contains("\\"accepted\\":true");
+                error[0] = jsonString(message, "code");
+                String profile = extractObject(message, "profile");
+                if (profile != null) {
+                    String receivedNickname = jsonString(profile, "nickname");
+                    if (receivedNickname != null && !receivedNickname.trim().isEmpty()) setNickname(receivedNickname);
+                    int balance = number(profile, "coins", -1);
+                    if (balance >= 0 && save != null) { save.coins = balance; save.save(); }
+                }
+                if (success[0]) {
+                    String receivedNickname = profile == null ? desired : jsonString(profile, "nickname");
+                    setNickname(receivedNickname == null ? desired : receivedNickname);
+                }
+                done.countDown();
+            } else if ("auth_error".equals(type) || "account_error".equals(type)) {
+                error[0] = jsonString(message, "code");
+                if ("INVALID_SESSION".equals(error[0])) clearToken();
+                done.countDown();
+            }
+        }, () -> client[0].send("{\\"type\\":\\"auth_resume\\",\\"token\\":\\""+jsonEscape(currentToken)+"\\"}"),
+        () -> { error[0] = "SERVER_DISCONNECTED"; done.countDown(); });
+
+        new Thread(client[0], "sneakysnakes-nickname-change").start();
+        try {
+            if (!done.await(15, TimeUnit.SECONDS)) error[0] = "CONNECTION_TIMEOUT";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            error[0] = "INTERRUPTED";
+        } finally {
+            client[0].close();
+        }
+
+        if (success[0]) {
+            JOptionPane.showMessageDialog(parent, "Nickname alterado! Foram cobradas 100 moedas.",
+                "Conta SneakySnakes", JOptionPane.INFORMATION_MESSAGE);
+            return true;
+        }
+        String reason = error[0] == null ? "SERVER_DISCONNECTED" : error[0];
+        String message;
+        switch (reason) {
+            case "INSUFFICIENT_COINS": message = "Você precisa de 100 moedas para alterar o nickname."; break;
+            case "NICKNAME_TAKEN": message = "Esse nickname já está sendo usado."; break;
+            case "SAME_NICKNAME": message = "Esse já é o seu nickname atual."; break;
+            case "INVALID_NICKNAME": message = "Nickname inválido. Use até 24 caracteres."; break;
+            case "LOGIN_REQUIRED": message = "Entre na sua conta para alterar o nickname."; break;
+            default: message = "Não foi possível alterar o nickname: " + reason; break;
+        }
+        JOptionPane.showMessageDialog(parent, message, "Não foi possível alterar", JOptionPane.WARNING_MESSAGE);
+        return false;
+    }
+
     public static void manageAccount(Component parent, String serverUrl) {
         lastServerUrl = serverUrl == null ? "" : serverUrl.trim();
         if (!lastServerUrl.startsWith("wss://")) {
@@ -226,11 +305,17 @@ public final class AccountSession {
                 "Conexão segura necessária", JOptionPane.WARNING_MESSAGE); return;
         }
         if (token().isEmpty()) { ensureLogin(parent, lastServerUrl); return; }
-        Object[] options = {"Excluir conta", "Sair da conta", "Cancelar"};
+        Object[] options = {"Alterar nickname (100 moedas)", "Sair da conta", "Excluir conta", "Cancelar"};
         int choice = JOptionPane.showOptionDialog(parent, "Conta conectada. O que deseja fazer?",
-            "Conta SneakySnakes", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[2]);
+            "Conta SneakySnakes", JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[3]);
+        if (choice == 0) {
+            String requested = JOptionPane.showInputDialog(parent, "Novo nickname (custa 100 moedas):",
+                nickname().isEmpty() ? "Alterar nickname" : nickname());
+            if (requested != null) changeNickname(parent, lastServerUrl, requested, null);
+            return;
+        }
         if (choice == 1) { clearToken(); JOptionPane.showMessageDialog(parent, "Você saiu da conta neste computador."); return; }
-        if (choice != 0) return;
+        if (choice != 2) return;
         if (JOptionPane.showConfirmDialog(parent, "A conta será excluída permanentemente. Deseja continuar?",
             "Primeira confirmação", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
         if (JOptionPane.showConfirmDialog(parent, "Todos os dados, moedas e skins desta conta serão perdidos. Tem certeza?",
