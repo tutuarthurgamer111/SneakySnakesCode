@@ -60,6 +60,7 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
     // -- Network
     private WebSocketClient wsClient;
     private volatile boolean connected = false;
+    private volatile boolean joinSent = false;
     private String statusMsg = "Connecting...";
 
     // -- Local player
@@ -228,12 +229,21 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
 
     void onConnected() {
         connected = true;
+        joinSent = false;
         statusMsg = "Joining...";
-        String skinId = SkinSystem.current().id;
         String token = AccountSession.token();
         if (token != null && !token.isEmpty()) {
+            // Wait for auth_resume so the server profile nickname wins over the guest name.
             send("{\"type\":\"auth_resume\",\"token\":\"" + escapeJson(token) + "\"}");
+        } else {
+            sendJoin();
         }
+    }
+
+    private synchronized void sendJoin() {
+        if (joinSent) return;
+        joinSent = true;
+        String skinId = SkinSystem.current().id;
         send("{\"type\":\"join\",\"name\":\"" + escapeJson(playerName) +
              "\",\"skin\":\"" + escapeJson(skinId) + "\"}");
     }
@@ -256,7 +266,7 @@ public class OnlineGamePanel extends JPanel implements ActionListener, KeyListen
                     int sx = WORLD_TILES/2, sy = WORLD_TILES/2;
                     myLen = 4;
                     for (int i=0;i<myLen;i++) { myBody[i*2]=sx-i; myBody[i*2+1]=sy; }
-                    myAlive=true; myScore=0; myCoins=0; myApples=0;
+                    myAlive=true; myScore=0; myCoins=(saveRef!=null?saveRef.coins:myCoins); myApples=0;
                     myCombo=1; myLevel=1; myXp=0;
                     logEvent("You joined as " + playerName);
                     SoundSystem.startRandomTrack();
@@ -292,10 +302,12 @@ case "state":
                 case "auth_resumed": {
                     String profile=jsonObject(msg,"profile");
                     if(profile!=null)applyAccountProfile(profile);
+                    sendJoin();
                     break;
                 }
                 case "auth_error": {
                     AccountSession.clearToken();
+                    sendJoin();
                     break;
                 }
                 case "profile": {
@@ -321,6 +333,11 @@ case "state":
     }
 
     private void applyAccountProfile(String profile) {
+        String nickname=jsonString(profile,"nickname");
+        if(nickname!=null&&!nickname.trim().isEmpty()) {
+            playerName=nickname.trim();
+            AccountSession.setNickname(playerName);
+        }
         if(saveRef==null)return;
         int balance=jsonInt(profile,"coins");
         if(balance>=0) {
@@ -1054,7 +1071,7 @@ private String serverUptime = "Server Est: 0s";
 
     private void respawn() {
         myLen=4; myDirX=1; myDirY=0; myNextDirX=1; myNextDirY=0;
-        myScore=0; myXp=0; myLevel=1; myCombo=1; myCoins=0; myApples=0;
+        myScore=0; myXp=0; myLevel=1; myCombo=1; myCoins=(saveRef!=null?saveRef.coins:myCoins); myApples=0;
         int sx=WORLD_TILES/2+(int)(Math.random()*20-10), sy=WORLD_TILES/2+(int)(Math.random()*20-10);
         for (int i=0;i<myLen;i++) { myBody[i*2]=sx-i; myBody[i*2+1]=sy; }
         myAlive=true; deadOverlay=false; deadAlpha=0;
