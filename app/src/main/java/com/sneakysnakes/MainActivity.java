@@ -462,6 +462,7 @@ public class MainActivity extends Activity {
             .putString("server_owned_skins",ids.toString())
             .putString("server_equipped_skin",profile.optString("equippedSkin","bright_green"))
             .putString("account_nickname",profile.optString("nickname",""))
+            .putString("last_player_name",profile.optString("nickname",""))
             .putInt("skin_high_score",profile.optInt("highScore",0))
             .apply();
     }
