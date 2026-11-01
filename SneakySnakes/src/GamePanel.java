@@ -37,6 +37,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     private final GameState      gs        = new GameState();
     private final ShopSystem     shop      = new ShopSystem();
     private final Random         rng       = new Random();
+    private final String guestPlayerName = "Guest" + (100000 + new Random().nextInt(900000));
     private String selectedGameMode = "NORMAL";
 
     private static final String ICON_PATH = "SneakySnakes/Resources/content/icons/";
@@ -551,12 +552,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         g.drawString(sub, (WIDTH - g.getFontMetrics().stringWidth(sub))/2, titleY+30);
 
         // -- Buttons
-        drawRoundButton(g, 285, 200, 230, 50, "ONLINE MODE",
+        drawRoundButton(g, menuButtonX(), 200, 230, 50, "ONLINE MODE",
             onlineHover ? new Color(80,200,255) : new Color(50,160,220), onlineHover);
 
         drawRoundButton(g, 285, 263, 230, 50, "OFFLINE MODE",
             offlineHover ? new Color(60,210,110) : new Color(35,160,80), offlineHover);
-        g.drawImage(skinShopIcon, 300, 334, 24, 24, null);
+        g.drawImage(skinShopIcon, menuButtonX()+15, 334, 24, 24, null);
         drawRoundButton(g, 285, 326, 230, 44, "SKIN SHOP",
             shopHover ? new Color(200,150,50) : new Color(160,110,30), shopHover);
 
@@ -590,7 +591,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         int blY = HEIGHT - 90;
         g.setFont(new Font("Arial", Font.BOLD, 13));
         g.setColor(new Color(180,220,255,210));
-        String pname = settings.playerName;
+        String accountNickname = AccountSession.nickname();
+        String pname = !AccountSession.token().isEmpty()
+            ? (accountNickname.isEmpty() ? "Conta conectada" : accountNickname)
+            : guestPlayerName;
         g.drawString(pname, 12, blY);
         drawIconButton(g, 12,  blY+8, 64, 64, gearIcon,
             settingsHover ? new Color(100,100,100) : new Color(60,60,60), settingsHover);
@@ -1099,6 +1103,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // BUTTON BOUNDS HELPERS
     // ==========================================================
 
+    private int menuButtonX() { return (WIDTH - 230) / 2; }
+    private int skinLeftX() { return (WIDTH - 420) / 2; }
+    private int skinRightX() { return skinLeftX() + 340; }
+
     // Mode Options popup internals
     private int moPopupX() { return (WIDTH-360)/2; }
     private int moPopupY() { return (HEIGHT-280)/2; }
@@ -1175,12 +1183,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         switch (screen) {
             case MENU:
                 // Online Mode
-                if (inRect(mx,my,285,200,230,50)) {
+                if (inRect(mx,my,menuButtonX(),200,230,50)) {
                     SoundSystem.playClick();
                     launchOnlineMode();
                 }
                 // Offline Mode
-                if (inRect(mx,my,285,263,230,50)) {
+                if (inRect(mx,my,menuButtonX(),263,230,50)) {
                     SoundSystem.playClick(); screen=Screen.GAME_MODES;
                 }
                 // Skin Shop
@@ -1193,8 +1201,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                     SoundSystem.playClick(); openAccountManager();
                 }
                 // Skin arrows
-                if (inRect(mx,my,190,430,80,30))  { SoundSystem.playClick(); SkinSystem.cyclePrev(); }
-                if (inRect(mx,my,530,430,80,30))  { SoundSystem.playClick(); SkinSystem.cycleNext(); }
+                if (inRect(mx,my,skinLeftX(),430,80,30))  { SoundSystem.playClick(); SkinSystem.cyclePrev(); }
+                if (inRect(mx,my,skinRightX(),430,80,30))  { SoundSystem.playClick(); SkinSystem.cycleNext(); }
                 // Bottom buttons
                 int blY2 = HEIGHT-90;
                 if (inRect(mx,my,12, blY2+8, 64, 64)) { SoundSystem.playClick(); screen=Screen.SETTINGS; }
@@ -1297,8 +1305,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         if (frame == null) return;
 
         // Use the player name from the profile — no prompt needed
-        String name = settings.playerName;
-        if (name == null || name.trim().isEmpty()) name = System.getProperty("user.name", "Player");
+        String name = guestPlayerName;
 
         // Show the Choose a Server screen
         ChooseServerDialog dialog = new ChooseServerDialog(frame);
@@ -1320,7 +1327,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                 SoundSystem.startMenuMusic();
                 screen = Screen.MENU;
             });
-        });
+        }, save);
 
         frame.getContentPane().removeAll();
         frame.getContentPane().add(ogp);
@@ -1348,15 +1355,15 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         int[] scaled = scaleMouseCoords(e.getX(), e.getY());
         int mx = scaled[0], my = scaled[1];
 
-        onlineHover      = inRect(mx,my,285,200,230,50);
-        offlineHover     = inRect(mx,my,285,263,230,50);
-        shopHover        = inRect(mx,my,285,326,230,44);
-        modeOptionsHover = inRect(mx,my,285,382,230,40);
+        onlineHover      = inRect(mx,my,menuButtonX(),200,230,50);
+        offlineHover     = inRect(mx,my,menuButtonX(),263,230,50);
+        shopHover        = inRect(mx,my,menuButtonX(),326,230,44);
+        modeOptionsHover = inRect(mx,my,menuButtonX(),382,230,40);
         normalModeHover=screen==Screen.GAME_MODES&&inRect(mx,my,moBtnX(),moPopupY()+62,260,44);
         partyModeHover=screen==Screen.GAME_MODES&&inRect(mx,my,moBtnX(),moPopupY()+116,260,44);
         infiniteModeHover=screen==Screen.GAME_MODES&&inRect(mx,my,moBtnX(),moPopupY()+170,260,44);
-        skinLeftHover    = inRect(mx,my,190,430,80,30);
-        skinRightHover   = inRect(mx,my,530,430,80,30);
+        skinLeftHover    = inRect(mx,my,skinLeftX(),430,80,30);
+        skinRightHover   = inRect(mx,my,skinRightX(),430,80,30);
         int blYh = HEIGHT-90;
         settingsHover = screen==Screen.MENU && inRect(mx,my,12, blYh+8, 64, 64);
         editHover     = screen==Screen.MENU && inRect(mx,my,84, blYh+8, 64, 64);
