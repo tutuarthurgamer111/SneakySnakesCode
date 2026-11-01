@@ -55,13 +55,13 @@ public final class AccountSession {
     }
 
     private static String jsonEscape(String value) {
-        return value.replace("\", "\").replace("\"", "\\"")
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
             .replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private static String jsonString(String json, String key) {
         Matcher m=Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"").matcher(json);
-        return m.find()?m.group(1).replace("\\n","\n").replace("\\"","\"").replace("\","\"):null;
+        return m.find()?m.group(1).replace("\\n","\n").replace("\\\"","\"").replace("\\\\","\\"):null;
     }
 
     public static boolean syncShopAction(String action, String skinId, SaveSystem save) {
