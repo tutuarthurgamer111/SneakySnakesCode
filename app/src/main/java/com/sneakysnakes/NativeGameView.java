@@ -139,7 +139,7 @@ public class NativeGameView extends View {
                     int x=o.optInt("x",world/2), y=o.optInt("y",world/2);
                     snake.clear();
                     for(int i=0;i<4;i++) snake.add(new int[]{x-i,y});
-                    dx=1; dy=0; nx=1; ny=0; score=0; alive=true; status="Conectado";
+                    dx=1; dy=0; nx=1; ny=0; score=0; comboN=1; lastFoodAt=0; alive=true; status="Conectado";
                     NativeAudio.randomTrack();
                 } else if(type.equals("player_died")&&o.optInt("id")==id) die(true);
                 invalidate();
