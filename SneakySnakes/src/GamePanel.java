@@ -555,13 +555,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
         drawRoundButton(g, menuButtonX(), 200, 230, 50, "ONLINE MODE",
             onlineHover ? new Color(80,200,255) : new Color(50,160,220), onlineHover);
 
-        drawRoundButton(g, 285, 263, 230, 50, "OFFLINE MODE",
+        drawRoundButton(g, menuButtonX(), 263, 230, 50, "OFFLINE MODE",
             offlineHover ? new Color(60,210,110) : new Color(35,160,80), offlineHover);
         g.drawImage(skinShopIcon, menuButtonX()+15, 334, 24, 24, null);
-        drawRoundButton(g, 285, 326, 230, 44, "SKIN SHOP",
+        drawRoundButton(g, menuButtonX(), 326, 230, 44, "SKIN SHOP",
             shopHover ? new Color(200,150,50) : new Color(160,110,30), shopHover);
 
-        drawRoundButton(g, 285, 382, 230, 40, "CONTA", modeOptionsHover ? new Color(80,190,150) : new Color(35,125,95), modeOptionsHover);
+        drawRoundButton(g, menuButtonX(), 382, 230, 40, "CONTA", modeOptionsHover ? new Color(80,190,150) : new Color(35,125,95), modeOptionsHover);
 
         // -- Skin selector row
         g.setFont(new Font("Arial", Font.BOLD, 18));
@@ -1192,12 +1192,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                     SoundSystem.playClick(); screen=Screen.GAME_MODES;
                 }
                 // Skin Shop
-                if (inRect(mx,my,285,326,230,44)) {
+                if (inRect(mx,my,menuButtonX(),326,230,44)) {
                     SoundSystem.playClick();
                     screen=Screen.SHOP;
                 }
                 // Mode Options
-                if (inRect(mx,my,285,382,230,40)) {
+                if (inRect(mx,my,menuButtonX(),382,230,40)) {
                     SoundSystem.playClick(); openAccountManager();
                 }
                 // Skin arrows
