@@ -93,7 +93,18 @@ public class NativeGameView extends View {
                     if(connected) NativeAudio.randomTrack();
                 } else if(type.equals("auth_resumed")) {
                     JSONObject profile=o.optJSONObject("profile");
-                    if(profile!=null)saveServerProfile(profile);
+                    if(profile!=null) {
+                        saveServerProfile(profile);
+                        String serverNickname=profile.optString("nickname","").trim();
+                        if(!serverNickname.isEmpty()) {
+                            joinName=serverNickname;
+                            if(getContext() instanceof Activity) {
+                                ((Activity)getContext()).getPreferences(Context.MODE_PRIVATE).edit()
+                                    .putString("last_player_name",serverNickname)
+                                    .apply();
+                            }
+                        }
+                    }
                     authPending=false;sendJoin();connected=true;status="Conectado";NativeAudio.randomTrack();
                 } else if(type.equals("auth_error")) {
                     if(authPending) {
