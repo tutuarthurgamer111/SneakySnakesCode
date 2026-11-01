@@ -1289,7 +1289,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                             "Conta indisponível",JOptionPane.WARNING_MESSAGE);
                         return;
                     }
-                    AccountSession.manageAccount(frame,url);
+                    AccountSession.manageAccount(frame,url,save);
                     requestFocusInWindow();
                 } catch(Exception ex) {
                     JOptionPane.showMessageDialog(frame,"Não foi possível localizar o servidor oficial.",
