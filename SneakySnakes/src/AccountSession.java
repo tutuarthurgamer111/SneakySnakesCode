@@ -55,13 +55,13 @@ public final class AccountSession {
     }
 
     private static String jsonEscape(String value) {
-        return value.replace("\\", "\\").replace("\"", "\\\"")
+        return value.replace("\", "\").replace("\"", "\\"")
             .replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private static String jsonString(String json, String key) {
         Matcher m=Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"").matcher(json);
-        return m.find()?m.group(1).replace("\\n","\n").replace("\\\"","\"").replace("\\","\\"):null;
+        return m.find()?m.group(1).replace("\\n","\n").replace("\\"","\"").replace("\","\"):null;
     }
 
     public static boolean syncShopAction(String action, String skinId, SaveSystem save) {
@@ -245,9 +245,9 @@ public final class AccountSession {
         client[0] = new WebSocketClient(serverUrl, message -> {
             String type = jsonString(message, "type");
             if ("auth_resumed".equals(type)) {
-                client[0].send("{\\"type\\":\\"auth_nickname_change\\",\\"nickname\\":\\""+jsonEscape(desired)+"\\"}");
+                client[0].send("{\"type\":\"auth_nickname_change\",\"nickname\":\""+jsonEscape(desired)+"\"}");
             } else if ("nickname_result".equals(type)) {
-                success[0] = message.contains("\\"accepted\\":true");
+                success[0] = message.contains("\"accepted\":true");
                 error[0] = jsonString(message, "code");
                 String profile = extractObject(message, "profile");
                 if (profile != null) {
@@ -266,7 +266,7 @@ public final class AccountSession {
                 if ("INVALID_SESSION".equals(error[0])) clearToken();
                 done.countDown();
             }
-        }, () -> client[0].send("{\\"type\\":\\"auth_resume\\",\\"token\\":\\""+jsonEscape(currentToken)+"\\"}"),
+        }, () -> client[0].send("{\"type\":\"auth_resume\",\"token\":\""+jsonEscape(currentToken)+"\"}"),
         () -> { error[0] = "SERVER_DISCONNECTED"; done.countDown(); });
 
         new Thread(client[0], "sneakysnakes-nickname-change").start();
