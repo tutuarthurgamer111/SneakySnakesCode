@@ -9,18 +9,34 @@ import java.util.regex.*;
 
 public final class AccountSession {
     private static final Path TOKEN_FILE = Paths.get(System.getProperty("user.home"), ".sneakysnakes-session");
+    private static final Path NICKNAME_FILE = Paths.get(System.getProperty("user.home"), ".sneakysnakes-nickname");
     private static volatile String token = loadToken();
+    private static volatile String nickname = loadNickname();
     private static volatile String lastServerUrl = "";
     private AccountSession() {}
 
     public static String token() { return token == null ? "" : token; }
+    public static String nickname() { return nickname == null ? "" : nickname; }
+    public static void setNickname(String value) {
+        nickname = value == null ? "" : value.trim();
+        try {
+            if (nickname.isEmpty()) Files.deleteIfExists(NICKNAME_FILE);
+            else Files.writeString(NICKNAME_FILE, nickname, StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (Exception ignored) {}
+    }
     public static void clearToken() {
         token="";
+        setNickname("");
         try { Files.deleteIfExists(TOKEN_FILE); } catch(Exception ignored) {}
     }
 
     private static String loadToken() {
         try { return Files.exists(TOKEN_FILE) ? Files.readString(TOKEN_FILE, StandardCharsets.UTF_8).trim() : ""; }
+        catch (Exception ignored) { return ""; }
+    }
+    private static String loadNickname() {
+        try { return Files.exists(NICKNAME_FILE) ? Files.readString(NICKNAME_FILE, StandardCharsets.UTF_8).trim() : ""; }
         catch (Exception ignored) { return ""; }
     }
 
@@ -61,6 +77,10 @@ public final class AccountSession {
             } else if("shop_result".equals(type)) {
                 success[0]=message.contains("\"accepted\":true");
                 String profile=extractObject(message,"profile");
+                if(profile!=null) {
+                    String receivedNickname=jsonString(profile,"nickname");
+                    if(receivedNickname!=null&&!receivedNickname.trim().isEmpty()) setNickname(receivedNickname);
+                }
                 if(success[0] && profile!=null && save!=null) {
                     int coins=number(profile,"coins",-1);
                     if(coins>=0) save.coins=coins;
@@ -168,6 +188,12 @@ public final class AccountSession {
                 else {
                     try { saveToken(received); } catch(Exception e){error[0]="TOKEN_SAVE_FAILED";}
                     recovery[0]=jsonString(message,"recoveryCode");
+                    String receivedNickname=jsonString(message,"nickname");
+                    if(receivedNickname==null) {
+                        String profile=extractObject(message,"profile");
+                        if(profile!=null) receivedNickname=jsonString(profile,"nickname");
+                    }
+                    if(receivedNickname!=null&&!receivedNickname.trim().isEmpty()) setNickname(receivedNickname);
                 }
                 done.countDown();
             } else if("auth_error".equals(responseType)) {
