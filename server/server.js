@@ -372,6 +372,47 @@ const id = nextId++;
                 send(ws, { type: 'auth_resumed', uuid: account.uuid, profile: publicProfile(account) });
                 break;
             }
+            case 'auth_nickname_change': {
+                const account = player.accountKey ? accounts[player.accountKey] : null;
+                if (!account) {
+                    send(ws, { type: 'nickname_result', accepted: false, code: 'LOGIN_REQUIRED' });
+                    break;
+                }
+                const nickname = String(msg.nickname || '').trim().replace(/\\s+/g, ' ');
+                const nicknameLength = Array.from(nickname).length;
+                if (!nickname || nicknameLength > 24 || /[\\u0000-\\u001F\\u007F]/.test(nickname)) {
+                    send(ws, { type: 'nickname_result', accepted: false, code: 'INVALID_NICKNAME' });
+                    break;
+                }
+                if (nickname === account.nickname) {
+                    send(ws, { type: 'nickname_result', accepted: false, code: 'SAME_NICKNAME' });
+                    break;
+                }
+                const normalizedNickname = nickname.normalize('NFKC').toLowerCase();
+                const taken = Object.entries(accounts).some(([key, other]) =>
+                    key !== player.accountKey &&
+                    String(other.nickname || '').normalize('NFKC').toLowerCase() === normalizedNickname
+                );
+                if (taken) {
+                    send(ws, { type: 'nickname_result', accepted: false, code: 'NICKNAME_TAKEN' });
+                    break;
+                }
+                const balance = Number.isSafeInteger(account.coins) && account.coins >= 0 ? account.coins : 0;
+                if (balance < 100) {
+                    send(ws, { type: 'nickname_result', accepted: false, code: 'INSUFFICIENT_COINS', profile: publicProfile(account) });
+                    break;
+                }
+                account.coins = balance - 100;
+                account.nickname = nickname;
+                player.name = nickname;
+                player.coins = account.coins;
+                saveAccounts();
+                const profile = publicProfile(account);
+                send(ws, { type: 'nickname_result', accepted: true, profile });
+                sendProfile(player);
+                broadcastAll(buildStatePayload());
+                break;
+            }
             case 'auth_delete': {
                 const account = player.accountKey ? accounts[player.accountKey] : null;
                 if (!account || !verifyPassword(account, msg.password)) { sendAuthError(ws, 'INVALID_CREDENTIALS'); break; }
