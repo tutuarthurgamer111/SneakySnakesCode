@@ -29,7 +29,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           mkdir -p app/src/main/assets/audio
-          for file in background track1 track2 track3 track4 click eat hit; do
+          for file in background track1 track2 track3 track4 click eat hit combo levelup win; do
             ffmpeg -y -i "SneakySnakes/Resources/content/sounds/${file}.wav" -vn -codec:a libmp3lame -b:a 112k "app/src/main/assets/audio/${file}.mp3"
           done
       - name: Prepare Android launcher icon from favicon.ico
