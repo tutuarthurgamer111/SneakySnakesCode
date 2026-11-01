@@ -55,13 +55,13 @@ public final class AccountSession {
     }
 
     private static String jsonEscape(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+        return value.replace("\\", "\\").replace("\"", "\\\"")
             .replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private static String jsonString(String json, String key) {
         Matcher m=Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"").matcher(json);
-        return m.find()?m.group(1).replace("\\n","\n").replace("\\\"","\"").replace("\\\\","\\"):null;
+        return m.find()?m.group(1).replace("\\n","\n").replace("\\\"","\"").replace("\\","\\"):null;
     }
 
     public static boolean syncShopAction(String action, String skinId, SaveSystem save) {
@@ -298,7 +298,9 @@ public final class AccountSession {
         return false;
     }
 
-    public static void manageAccount(Component parent, String serverUrl) {
+    public static void manageAccount(Component parent, String serverUrl) { manageAccount(parent, serverUrl, null); }
+
+    public static void manageAccount(Component parent, String serverUrl, SaveSystem save) {
         lastServerUrl = serverUrl == null ? "" : serverUrl.trim();
         if (!lastServerUrl.startsWith("wss://")) {
             JOptionPane.showMessageDialog(parent, "A conta precisa de um servidor seguro (WSS).",
@@ -311,7 +313,7 @@ public final class AccountSession {
         if (choice == 0) {
             String requested = JOptionPane.showInputDialog(parent, "Novo nickname (custa 100 moedas):",
                 nickname().isEmpty() ? "Alterar nickname" : nickname());
-            if (requested != null) changeNickname(parent, lastServerUrl, requested, null);
+            if (requested != null) changeNickname(parent, lastServerUrl, requested, save);
             return;
         }
         if (choice == 1) { clearToken(); JOptionPane.showMessageDialog(parent, "Você saiu da conta neste computador."); return; }
