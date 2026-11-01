@@ -240,7 +240,7 @@ public class ShopSystem {
                 if (skin.unlocked) {
                     // Account owners equip through the authoritative server.
                     if (!AccountSession.token().isEmpty()) {
-                        if (!AccountSession.syncShopAction("shop_equip", skin.id, save)) return false;
+                        if (!AccountSession.syncShopAction("skin_equip", skin.id, save)) return false;
                     } else {
                         SkinSystem.setById(skin.id);
                     }
