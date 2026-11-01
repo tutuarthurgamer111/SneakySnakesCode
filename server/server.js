@@ -378,9 +378,9 @@ const id = nextId++;
                     send(ws, { type: 'nickname_result', accepted: false, code: 'LOGIN_REQUIRED' });
                     break;
                 }
-                const nickname = String(msg.nickname || '').trim().replace(/\\s+/g, ' ');
+                const nickname = String(msg.nickname || '').trim().replace(/\s+/g, ' ');
                 const nicknameLength = Array.from(nickname).length;
-                if (!nickname || nicknameLength > 24 || /[\\u0000-\\u001F\\u007F]/.test(nickname)) {
+                if (!nickname || nicknameLength > 24 || /[\u0000-\u001F\u007F]/.test(nickname)) {
                     send(ws, { type: 'nickname_result', accepted: false, code: 'INVALID_NICKNAME' });
                     break;
                 }
