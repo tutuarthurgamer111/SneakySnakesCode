@@ -25,7 +25,7 @@ final class NativeAudio {
         pool = new SoundPool.Builder().setMaxStreams(6).setAudioAttributes(attrs).build();
         String[] names = {"click","eat","hit","combo","levelup","win"};
         for (String n : names) {
-            try (AssetFileDescriptor fd = assets.openFd("sounds/" + n + ".wav")) {
+            try (AssetFileDescriptor fd = assets.openFd("audio/" + n + ".mp3")) {
                 sounds.put(n, pool.load(fd, 1));
             } catch (Exception ignored) {}
         }
@@ -44,7 +44,7 @@ final class NativeAudio {
         stopMusic();
         if (!enabled || pausedByFocus || assets == null) return;
         try {
-            AssetFileDescriptor fd = assets.openFd("sounds/" + file);
+            AssetFileDescriptor fd = assets.openFd("audio/" + file.replace(".wav", ".mp3"));
             music = new MediaPlayer();
             music.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_GAME)
