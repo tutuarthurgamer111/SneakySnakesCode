@@ -540,7 +540,7 @@ public class MainActivity extends Activity {
             action.setEnabled(!owned || !equippedSkin().equals(id));
             action.setOnClickListener(v->{
                 if(owned) {
-                    requestShopAction("shop_equip",id);
+                    requestShopAction("skin_equip",id);
                 } else if(SKIN_COSTS[indexOfSkin(id)]>0) {
                     requestShopAction("shop_buy",id);
                 } else {
