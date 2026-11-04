@@ -1,0 +1,2 @@
+SneakySnakes restored from build 92 (commit 9640cd0d9843d1efb5e5bbe9126852ccb5004ae5), before the account system.
+Default secure multiplayer endpoint: wss://163.176.148.122.nip.io:443
