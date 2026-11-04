@@ -1621,7 +1621,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             center.add(orLabel);
             center.add(Box.createVerticalStrut(8));
 
-            JTextField searchBar = new JTextField("ws://");
+            JTextField searchBar = new JTextField("wss://163.176.148.122.nip.io");
             searchBar.setFont(new Font("Arial", Font.PLAIN, 14));
             searchBar.setForeground(new Color(160, 190, 220));
             searchBar.setBackground(new Color(30, 36, 54));

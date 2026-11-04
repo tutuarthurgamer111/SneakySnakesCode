@@ -165,11 +165,11 @@ public class MainActivity extends Activity {
         random.setOnClickListener(v->randomOfficialServer(random));
         TextView manual=text("OU CONECTAR MANUALMENTE",12,0xff83a9c5);
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-1,dp(34)); mp.topMargin=dp(5); root.addView(manual,mp);
-        host=edit("Host ou IP","163.176.148.122",false);
+        host=edit("Host ou IP","163.176.148.122.nip.io",false);
         LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(-1,dp(46)); root.addView(host,hp);
-        port=edit("Porta","3000",true);
+        port=edit("Porta","443",true);
         LinearLayout.LayoutParams pp=new LinearLayout.LayoutParams(-1,dp(46)); pp.topMargin=dp(7); root.addView(port,pp);
-        secure=new Switch(this); secure.setText("Conexão segura (wss://)");
+        secure=new Switch(this); secure.setText("Conexão segura (wss://)"); secure.setChecked(true);
         secure.setTextColor(0xffdce9f5); secure.setTextSize(13);
         LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(42)); root.addView(secure,sp);
         addButton("CONECTAR",true,()->startOnline());
@@ -224,7 +224,7 @@ public class MainActivity extends Activity {
                 b.setEnabled(true);b.setText("ENTRAR EM SERVIDOR OFICIAL ALEATÓRIO");
                 if(selected==null){Toast.makeText(this,problem==null?"Nenhum servidor oficial disponível.":"Falha ao buscar: "+problem,Toast.LENGTH_LONG).show();return;}
                 String[] v=selected.split("\\|",2);
-                String address="ws://"+v[0]+":"+v[1];
+                String address=(s.optBoolean("secure",false)?"wss://":"ws://")+v[0]+":"+v[1];
                 getPreferences(0).edit().putString("last_player_name",playerName()).putString("last_server_url",address).apply();
                 launchGame(playerName(),address,false,"ONLINE");
             });
