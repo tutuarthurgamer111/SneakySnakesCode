@@ -18,7 +18,7 @@ public class MainActivity extends Activity {
     NativeGameView game;
     EditText name, host, port;
     Switch secure;
-    static final String SERVER_API = "https://sneakysnakes-server-list.vercel.app/api/servers";
+    static final String SERVER_API = "https://sneakysnakes-server-list-5zbj731gw-tutuerick10plays-projects.vercel.app/api";
     LinearLayout root;
     NativeSocket shopSocket;
     boolean shopVisible=false;
@@ -214,7 +214,7 @@ public class MainActivity extends Activity {
                 if(servers!=null){ArrayList<String> valid=new ArrayList<>();
                     for(int i=0;i<servers.length();i++){JSONObject s=servers.optJSONObject(i);if(s==null)continue;
                         String h=s.optString("host","").trim();int p=s.optInt("port",3000);
-                        if(!h.isEmpty()&&!h.contains("/")&&!h.contains(":")&&p>0&&p<=65535)valid.add(h+"|"+p);
+                        if(!h.isEmpty()&&!h.contains("/")&&!h.contains(":")&&p>0&&p<=65535)valid.add(h+"|"+p+"|"+s.optBoolean("secure",p==443));
                     }
                     count=valid.size();if(!valid.isEmpty())chosen=valid.get(new Random().nextInt(valid.size()));
                 }
@@ -224,7 +224,7 @@ public class MainActivity extends Activity {
                 b.setEnabled(true);b.setText("ENTRAR EM SERVIDOR OFICIAL ALEATÓRIO");
                 if(selected==null){Toast.makeText(this,problem==null?"Nenhum servidor oficial disponível.":"Falha ao buscar: "+problem,Toast.LENGTH_LONG).show();return;}
                 String[] v=selected.split("\\|",2);
-                String address=(s.optBoolean("secure",false)?"wss://":"ws://")+v[0]+":"+v[1];
+                String address=(Boolean.parseBoolean(v.length>2?v[2]:"false")?"wss://":"ws://")+v[0]+":"+v[1];
                 getPreferences(0).edit().putString("last_player_name",playerName()).putString("last_server_url",address).apply();
                 launchGame(playerName(),address,false,"ONLINE");
             });
