@@ -1468,7 +1468,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // =========================================================================
     private class ChooseServerDialog extends JDialog {
         private static final String VERCEL_API_URL =
-            "https://sneakysnakes-server-list.vercel.app/api";
+            "https://sneakysnakes-server-list-5zbj731gw-tutuerick10plays-projects.vercel.app/api";
 
         private String selectedUrl = null;
         private final JPanel center;
@@ -1750,6 +1750,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                         java.util.regex.Pattern.compile(
                             "\\\"port\\\"\\s*:\\s*(\\d+)"
                         ).matcher(object);
+                    java.util.regex.Matcher secureMatcher =
+                        java.util.regex.Pattern.compile(
+                            "\\\"secure\\\"\\s*:\\s*(true|false)",
+                            java.util.regex.Pattern.CASE_INSENSITIVE
+                        ).matcher(object);
 
                     if (!hostMatcher.find() || !portMatcher.find()) {
                         continue;
@@ -1763,12 +1768,17 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                         continue;
                     }
 
+                    boolean secure = port == 443;
+                    if (secureMatcher.find()) {
+                        secure = secure || Boolean.parseBoolean(secureMatcher.group(1));
+                    }
+
                     if (host.isEmpty() || host.contains("/") ||
                         host.contains(":") || port < 1 || port > 65535) {
                         continue;
                     }
 
-                    String address = "ws://" + host + ":" + port;
+                    String address = (secure ? "wss://" : "ws://") + host + ":" + port;
                     if (!addresses.contains(address)) {
                         addresses.add(address);
                     }
