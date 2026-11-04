@@ -1400,7 +1400,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
     // =========================================================================
     private class ChooseServerDialog extends JDialog {
         private static final String VERCEL_API_URL =
-            "https://sneakysnakes-server-list.vercel.app/api";
+            "https://sneakysnakes-server-list-5zbj731gw-tutuerick10plays-projects.vercel.app/api";
 
         private String selectedUrl = null;
         private final JPanel center;
@@ -1553,7 +1553,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
             center.add(orLabel);
             center.add(Box.createVerticalStrut(8));
 
-            JTextField searchBar = new JTextField("ws://");
+            JTextField searchBar = new JTextField("wss://163.176.148.122.nip.io");
             searchBar.setFont(new Font("Arial", Font.PLAIN, 14));
             searchBar.setForeground(new Color(160, 190, 220));
             searchBar.setBackground(new Color(30, 36, 54));
@@ -1682,6 +1682,11 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                         java.util.regex.Pattern.compile(
                             "\\\"port\\\"\\s*:\\s*(\\d+)"
                         ).matcher(object);
+                    java.util.regex.Matcher secureMatcher =
+                        java.util.regex.Pattern.compile(
+                            "\\\"secure\\\"\\s*:\\s*(true|false)",
+                            java.util.regex.Pattern.CASE_INSENSITIVE
+                        ).matcher(object);
 
                     if (!hostMatcher.find() || !portMatcher.find()) {
                         continue;
@@ -1700,7 +1705,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener,
                         continue;
                     }
 
-                    String address = "ws://" + host + ":" + port;
+                    boolean secure = port == 443;
+                    if (secureMatcher.find()) {
+                        secure = secure || Boolean.parseBoolean(secureMatcher.group(1));
+                    }
+                    String scheme = secure ? "wss://" : "ws://";
+                    String address = scheme + host + ":" + port;
                     if (!addresses.contains(address)) {
                         addresses.add(address);
                     }
